@@ -21,7 +21,7 @@ test("server-renders Casa Morta with account access", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>Casa Morta/);
-  assert.match(html, /NÃO DEIXE QUE ELA/);
+  assert.match(html, /A CASA APRENDE SEUS PASSOS/);
   assert.match(html, /ENTRAR NA CASA/);
   assert.match(html, /ENTRAR PARA SALVAR DESEMPENHO/);
   assert.match(html, /class="account-trigger"/);

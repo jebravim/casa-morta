@@ -149,6 +149,20 @@ const FURNITURE: Furniture[] = [
   { kind: "counter", x: 1280, y: 1460, w: 290, h: 60 }, { kind: "table", x: 1950, y: 1270, w: 170, h: 100 },
 ];
 
+const RUGS: Rect[] = [
+  { x: 210, y: 245, w: 245, h: 92 }, { x: 760, y: 185, w: 315, h: 150 },
+  { x: 1328, y: 294, w: 300, h: 118 }, { x: 1918, y: 305, w: 250, h: 118 },
+  { x: 690, y: 770, w: 395, h: 165 }, { x: 1334, y: 650, w: 350, h: 200 },
+  { x: 1945, y: 800, w: 285, h: 165 }, { x: 820, y: 1225, w: 285, h: 155 },
+  { x: 1915, y: 1345, w: 310, h: 128 },
+];
+
+const STAINS: (Point & { rx: number; ry: number })[] = [
+  { x: 510, y: 460, rx: 55, ry: 19 }, { x: 1090, y: 370, rx: 82, ry: 30 },
+  { x: 1545, y: 615, rx: 68, ry: 24 }, { x: 2140, y: 980, rx: 76, ry: 28 },
+  { x: 460, y: 1190, rx: 64, ry: 22 }, { x: 1440, y: 1380, rx: 90, ry: 32 },
+];
+
 const SOLIDS: Rect[] = [...WALLS, ...FURNITURE];
 
 const BATTERY_POSITIONS: Point[] = [
@@ -251,19 +265,21 @@ function findPath(start: Point, goal: Point) {
   return [];
 }
 
-function makeGame(): Game {
+function makeGame(preview = false): Game {
   const roomHeat = Object.fromEntries(ROOMS.map((room) => [room.name, 0]));
   const hideUses = Object.fromEntries(HIDING_SPOTS.map((spot) => [spot.id, 0]));
+  const playerStart = preview ? { x: 1350, y: 860 } : { x: 925, y: 1450 };
+  const monsterStart = preview ? { x: 1520, y: 860 } : { x: 210, y: 280 };
   return {
-    mode: "intro", elapsed: 0, player: { x: 925, y: 1450 }, aim: -Math.PI / 2,
+    mode: "intro", elapsed: 0, player: playerStart, aim: preview ? 0 : -Math.PI / 2,
     camera: { x: 0, y: 0 }, keys: new Set(), flashlightOn: true, battery: 68, stamina: 100,
     hiddenSpot: null, hideRemaining: 8, hideCooldown: 0, hideUses, roomHeat, heatClock: 0,
     noiseIndex: 0, noisePulse: null, collected: 0, hidingSeconds: 0, flashlightSeconds: 0,
     visitedRooms: new Set(["PORÃO"]), batteries: BATTERY_POSITIONS.map((point) => ({ ...point, taken: false })),
     message: "", messageUntil: 0, hudClock: 0, lastFrame: performance.now(), audio: null,
     monster: {
-      x: 210, y: 280, mode: "espreitando", angle: 0, target: { x: 930, y: 270 },
-      lastSeen: { x: 925, y: 1450 }, path: [], pathIndex: 0, repathIn: 0, searchUntil: 0, lastCheckedSpot: null,
+      ...monsterStart, mode: "espreitando", angle: preview ? Math.PI : 0, target: { x: 930, y: 270 },
+      lastSeen: { ...playerStart }, path: [], pathIndex: 0, repathIn: 0, searchUntil: 0, lastCheckedSpot: null,
     },
   };
 }
@@ -351,7 +367,9 @@ export default function Home() {
   const [history, setHistory] = useState<GameSessionRecord[]>([]);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
-  if (gameRef.current === null && typeof window !== "undefined") gameRef.current = makeGame();
+  useEffect(() => {
+    if (gameRef.current === null) gameRef.current = makeGame(true);
+  }, []);
 
   const loadHistory = useCallback(async () => {
     if (!userRef.current) return;
@@ -462,7 +480,9 @@ export default function Home() {
     })();
   }, [loadHistory]);
 
-  saveGameSessionRef.current = saveGameSession;
+  useEffect(() => {
+    saveGameSessionRef.current = saveGameSession;
+  }, [saveGameSession]);
 
   const toggleFlashlight = useCallback(() => {
     const game = gameRef.current;
@@ -515,6 +535,11 @@ export default function Home() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const survivorSprite = new Image();
+    survivorSprite.src = "/assets/sobrevivente.png";
+    const presenceSprite = new Image();
+    presenceSprite.src = "/assets/presenca.png";
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect();
@@ -731,39 +756,140 @@ export default function Home() {
       }
     };
 
-    const drawFurniture = (item: Furniture) => {
-      ctx.save();
-      ctx.fillStyle = "#171b17";
-      ctx.fillRect(item.x + 7, item.y + 9, item.w, item.h);
+    const drawFurniture = (target: CanvasRenderingContext2D, item: Furniture) => {
+      target.save();
+      target.fillStyle = "rgba(0,0,0,.58)";
+      target.fillRect(item.x + 9, item.y + 12, item.w, item.h);
       if (item.kind === "bed") {
-        ctx.fillStyle = "#59423a"; ctx.fillRect(item.x, item.y, item.w, item.h);
-        ctx.fillStyle = "#746253"; ctx.fillRect(item.x + 8, item.y + 7, Math.min(42, item.w - 16), item.h - 14);
-        ctx.fillStyle = "#402b2b"; ctx.fillRect(item.x + Math.min(52, item.w / 3), item.y + 8, item.w - Math.min(62, item.w / 3), item.h - 16);
+        target.fillStyle = "#332720"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.fillStyle = "#67594a"; target.fillRect(item.x + 6, item.y + 6, item.w - 12, item.h - 12);
+        target.fillStyle = "#8a806c"; target.fillRect(item.x + 10, item.y + 10, Math.min(42, item.w - 20), item.h - 20);
+        target.fillStyle = "#45312d"; target.fillRect(item.x + Math.min(52, item.w / 3), item.y + 11, item.w - Math.min(66, item.w / 3), item.h - 22);
+        target.strokeStyle = "#241a18"; target.lineWidth = 3; target.strokeRect(item.x + 4, item.y + 4, item.w - 8, item.h - 8);
+        target.fillStyle = "rgba(129,37,31,.34)"; target.fillRect(item.x + item.w * .56, item.y + 13, item.w * .24, item.h - 26);
       } else if (item.kind === "wardrobe") {
-        ctx.fillStyle = "#493b2c"; ctx.fillRect(item.x, item.y, item.w, item.h);
-        ctx.strokeStyle = "#756246"; ctx.lineWidth = 3; ctx.strokeRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
-        ctx.fillStyle = "#b1a06c"; ctx.fillRect(item.x + item.w / 2 - 2, item.y + item.h / 2, 4, 4);
+        target.fillStyle = "#392d22"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.fillStyle = "#54412d"; target.fillRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
+        target.strokeStyle = "#766044"; target.lineWidth = 3; target.strokeRect(item.x + 8, item.y + 8, item.w - 16, item.h - 16);
+        target.beginPath(); target.moveTo(item.x + item.w / 2, item.y + 8); target.lineTo(item.x + item.w / 2, item.y + item.h - 8); target.stroke();
+        target.fillStyle = "#b49a5d"; target.fillRect(item.x + item.w / 2 - 5, item.y + item.h / 2, 3, 4); target.fillRect(item.x + item.w / 2 + 3, item.y + item.h / 2, 3, 4);
       } else if (item.kind === "shelf") {
-        ctx.fillStyle = "#473927"; ctx.fillRect(item.x, item.y, item.w, item.h);
-        for (let x = item.x + 8; x < item.x + item.w - 8; x += 16) { ctx.fillStyle = x % 32 ? "#6b3d35" : "#4d573c"; ctx.fillRect(x, item.y + 7, 9, item.h - 14); }
+        target.fillStyle = "#302419"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.fillStyle = "#5a452e"; target.fillRect(item.x + 4, item.y + 4, item.w - 8, item.h - 8);
+        for (let x = item.x + 8; x < item.x + item.w - 8; x += 16) { target.fillStyle = x % 48 ? "#633a33" : "#3f4b3a"; target.fillRect(x, item.y + 8, 10, item.h - 16); }
+        target.fillStyle = "#251b14"; target.fillRect(item.x + 3, item.y + item.h / 2 - 2, item.w - 6, 4);
       } else if (item.kind === "sofa") {
-        ctx.fillStyle = "#344438"; ctx.fillRect(item.x, item.y, item.w, item.h);
-        ctx.strokeStyle = "#53634e"; ctx.lineWidth = 4; ctx.strokeRect(item.x + 6, item.y + 6, item.w - 12, item.h - 12);
+        target.fillStyle = "#29362d"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.fillStyle = "#3d4b3d"; target.fillRect(item.x + 7, item.y + 8, item.w - 14, item.h - 16);
+        target.strokeStyle = "#59634f"; target.lineWidth = 4; target.strokeRect(item.x + 6, item.y + 6, item.w - 12, item.h - 12);
+        target.fillStyle = "rgba(15,18,15,.35)"; target.fillRect(item.x + item.w / 2 - 2, item.y + 8, 4, item.h - 16);
       } else if (item.kind === "crate") {
-        ctx.fillStyle = "#57462f"; ctx.fillRect(item.x, item.y, item.w, item.h);
-        ctx.strokeStyle = "#816945"; ctx.lineWidth = 5; ctx.strokeRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
-        ctx.beginPath(); ctx.moveTo(item.x + 8, item.y + 8); ctx.lineTo(item.x + item.w - 8, item.y + item.h - 8); ctx.stroke();
+        target.fillStyle = "#493721"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.strokeStyle = "#72583a"; target.lineWidth = 5; target.strokeRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
+        target.beginPath(); target.moveTo(item.x + 8, item.y + 8); target.lineTo(item.x + item.w - 8, item.y + item.h - 8); target.moveTo(item.x + item.w - 8, item.y + 8); target.lineTo(item.x + 8, item.y + item.h - 8); target.stroke();
       } else {
-        ctx.fillStyle = item.kind === "counter" ? "#4e5143" : item.kind === "piano" ? "#29251f" : "#534633";
-        ctx.fillRect(item.x, item.y, item.w, item.h);
-        ctx.strokeStyle = "#77705a"; ctx.lineWidth = 3; ctx.strokeRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
+        target.fillStyle = item.kind === "counter" ? "#3f4036" : item.kind === "piano" ? "#201c18" : "#483824";
+        target.fillRect(item.x, item.y, item.w, item.h);
+        target.fillStyle = "rgba(151,130,91,.18)"; target.fillRect(item.x + 6, item.y + 6, item.w - 12, 7);
+        target.strokeStyle = "#6d624d"; target.lineWidth = 3; target.strokeRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
+        if (item.kind === "piano") {
+          for (let x = item.x + 10; x < item.x + item.w - 9; x += 9) { target.fillStyle = x % 27 ? "#c1bba3" : "#312b25"; target.fillRect(x, item.y + item.h - 21, 7, 14); }
+        }
       }
-      ctx.restore();
+      target.restore();
     };
 
+    const mansionLayer = document.createElement("canvas");
+    mansionLayer.width = MAP_W;
+    mansionLayer.height = MAP_H;
+    const mansion = mansionLayer.getContext("2d")!;
+    mansion.imageSmoothingEnabled = false;
+    mansion.fillStyle = "#100f0c";
+    mansion.fillRect(0, 0, MAP_W, MAP_H);
+
+    ROOMS.forEach((room, roomIndex) => {
+      const tiled = [2, 4, 6, 10].includes(roomIndex);
+      mansion.fillStyle = tiled ? "#292a24" : roomIndex % 3 === 0 ? "#332c22" : "#302b22";
+      mansion.fillRect(room.x, room.y, room.w, room.h);
+      if (tiled) {
+        const tile = 34;
+        for (let y = room.y; y < room.y + room.h; y += tile) {
+          for (let x = room.x; x < room.x + room.w; x += tile) {
+            const tone = (Math.floor(x / tile) + Math.floor(y / tile)) % 2;
+            mansion.fillStyle = tone ? "#37382f" : "#252821";
+            mansion.fillRect(x + 1, y + 1, tile - 2, tile - 2);
+            mansion.fillStyle = "rgba(0,0,0,.2)"; mansion.fillRect(x + tile - 3, y + 2, 2, tile - 3);
+          }
+        }
+      } else {
+        const plankH = 28;
+        for (let y = room.y; y < room.y + room.h; y += plankH) {
+          const offset = (Math.floor(y / plankH) % 2) * 54;
+          for (let x = room.x - offset; x < room.x + room.w; x += 108) {
+            const seed = Math.abs((x * 17 + y * 29 + roomIndex * 41) % 5);
+            mansion.fillStyle = ["#3b3125", "#423629", "#362d23", "#46382a", "#392f25"][seed];
+            mansion.fillRect(x + 1, y + 1, 106, plankH - 2);
+            mansion.fillStyle = "rgba(134,113,80,.13)"; mansion.fillRect(x + 8, y + 5, 72, 2);
+            mansion.fillStyle = "rgba(0,0,0,.22)"; mansion.fillRect(x + 105, y + 2, 2, plankH - 3);
+          }
+        }
+      }
+      mansion.font = "700 13px monospace";
+      mansion.fillStyle = "rgba(178,164,121,.12)";
+      mansion.textAlign = "center";
+      mansion.fillText(room.name, room.x + room.w / 2, room.y + 32);
+    });
+
+    for (const rug of RUGS) {
+      mansion.fillStyle = "rgba(16,10,9,.68)"; mansion.fillRect(rug.x + 7, rug.y + 9, rug.w, rug.h);
+      mansion.fillStyle = "#4d2824"; mansion.fillRect(rug.x, rug.y, rug.w, rug.h);
+      mansion.strokeStyle = "#755143"; mansion.lineWidth = 4; mansion.strokeRect(rug.x + 8, rug.y + 8, rug.w - 16, rug.h - 16);
+      mansion.strokeStyle = "#241a18"; mansion.lineWidth = 2; mansion.strokeRect(rug.x + 17, rug.y + 17, rug.w - 34, rug.h - 34);
+      mansion.fillStyle = "rgba(138,100,67,.34)";
+      for (let x = rug.x + 24; x < rug.x + rug.w - 18; x += 30) mansion.fillRect(x, rug.y + rug.h / 2 - 3, 14, 6);
+    }
+
+    for (const stain of STAINS) {
+      mansion.fillStyle = "rgba(69,18,16,.58)";
+      mansion.beginPath(); mansion.ellipse(stain.x, stain.y, stain.rx, stain.ry, -.18, 0, Math.PI * 2); mansion.fill();
+      mansion.fillStyle = "rgba(21,10,9,.32)";
+      mansion.beginPath(); mansion.ellipse(stain.x + stain.rx * .28, stain.y - 2, stain.rx * .38, stain.ry * .42, .25, 0, Math.PI * 2); mansion.fill();
+    }
+
+    ROOMS.forEach((room, index) => {
+      for (let piece = 0; piece < 5; piece++) {
+        const x = room.x + 55 + ((piece * 127 + index * 73) % Math.max(90, room.w - 110));
+        const y = room.y + 62 + ((piece * 83 + index * 47) % Math.max(90, room.h - 124));
+        mansion.save(); mansion.translate(x, y); mansion.rotate(((piece + index) % 5 - 2) * .08);
+        mansion.fillStyle = "rgba(153,142,111,.36)"; mansion.fillRect(-9, -6, 18, 12);
+        mansion.fillStyle = "rgba(55,48,37,.4)"; mansion.fillRect(-5, -2, 10, 1); mansion.fillRect(-4, 2, 7, 1);
+        mansion.restore();
+      }
+    });
+
+    for (const wall of WALLS) {
+      mansion.fillStyle = "rgba(0,0,0,.72)"; mansion.fillRect(wall.x + 10, wall.y + 12, wall.w, wall.h);
+      mansion.fillStyle = "#24231d"; mansion.fillRect(wall.x, wall.y, wall.w, wall.h);
+      mansion.fillStyle = "#4f4b3d"; mansion.fillRect(wall.x + 3, wall.y + 3, wall.w - 6, wall.h - 6);
+      mansion.fillStyle = "#6a6250";
+      if (wall.w > wall.h) {
+        mansion.fillRect(wall.x, wall.y + 4, wall.w, 4);
+        for (let x = wall.x + 10; x < wall.x + wall.w - 8; x += 42) mansion.fillRect(x, wall.y + 12, 27, 3);
+      } else {
+        mansion.fillRect(wall.x + 4, wall.y, 4, wall.h);
+        for (let y = wall.y + 10; y < wall.y + wall.h - 8; y += 42) mansion.fillRect(wall.x + 12, y, 3, 27);
+      }
+      mansion.fillStyle = "rgba(11,12,10,.48)";
+      if (wall.w > wall.h) mansion.fillRect(wall.x, wall.y + wall.h - 7, wall.w, 7);
+      else mansion.fillRect(wall.x + wall.w - 7, wall.y, 7, wall.h);
+    }
+    FURNITURE.forEach((item) => drawFurniture(mansion, item));
+
     const draw = (game: Game, width: number, height: number) => {
-      const cameraTargetX = clamp(game.player.x - width / 2, 0, Math.max(0, MAP_W - width));
-      const cameraTargetY = clamp(game.player.y - height / 2, 0, Math.max(0, MAP_H - height));
+      const focusX = game.mode === "intro" ? width * .72 : width / 2;
+      const focusY = game.mode === "intro" ? height * .54 : height / 2;
+      const cameraTargetX = clamp(game.player.x - focusX, 0, Math.max(0, MAP_W - width));
+      const cameraTargetY = clamp(game.player.y - focusY, 0, Math.max(0, MAP_H - height));
       game.camera.x += (cameraTargetX - game.camera.x) * .13;
       game.camera.y += (cameraTargetY - game.camera.y) * .13;
 
@@ -775,33 +901,7 @@ export default function Home() {
       ctx.fillRect(0, 0, width, height);
       ctx.save();
       ctx.translate(-game.camera.x, -game.camera.y);
-
-      ctx.fillStyle = "#3a3e32";
-      ctx.fillRect(0, 0, MAP_W, MAP_H);
-      const tile = 40;
-      for (let y = 40; y < MAP_H - 40; y += tile) {
-        for (let x = 40; x < MAP_W - 40; x += tile) {
-          const seed = ((x / tile) * 13 + (y / tile) * 7) % 5;
-          ctx.fillStyle = seed === 0 ? "#464a3b" : seed === 1 ? "#414537" : "#3d4134";
-          ctx.fillRect(x, y, tile - 1, tile - 1);
-          ctx.fillStyle = "rgba(10,12,10,.12)"; ctx.fillRect(x + 8, y, 2, tile);
-        }
-      }
-      for (const room of ROOMS) {
-        ctx.font = "700 14px monospace";
-        ctx.fillStyle = "rgba(151,151,120,.16)";
-        ctx.textAlign = "center";
-        ctx.fillText(room.name, room.x + room.w / 2, room.y + 34);
-      }
-
-      for (const wall of WALLS) {
-        ctx.fillStyle = "#1c1f1a"; ctx.fillRect(wall.x + 7, wall.y + 8, wall.w, wall.h);
-        ctx.fillStyle = "#5e5544"; ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-        ctx.fillStyle = "#807055";
-        if (wall.w > wall.h) { for (let x = wall.x; x < wall.x + wall.w; x += 42) ctx.fillRect(x, wall.y + 5, 28, 4); }
-        else { for (let y = wall.y; y < wall.y + wall.h; y += 42) ctx.fillRect(wall.x + 5, y, 4, 28); }
-      }
-      FURNITURE.forEach(drawFurniture);
+      ctx.drawImage(mansionLayer, 0, 0);
 
       for (const spot of HIDING_SPOTS) {
         const close = !game.hiddenSpot && distance(game.player, spot.check) < 82;
@@ -830,40 +930,38 @@ export default function Home() {
       const monster = game.monster;
       ctx.save();
       ctx.translate(monster.x, monster.y);
-      ctx.rotate(monster.angle);
-      ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.beginPath(); ctx.ellipse(-5, 12, 28, 18, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "#321919"; ctx.lineWidth = 5;
-      for (const offset of [-12, 0, 12]) { ctx.beginPath(); ctx.moveTo(-8, offset); ctx.lineTo(-32, offset + Math.sin(performance.now() / 130 + offset) * 8); ctx.stroke(); }
-      ctx.fillStyle = monster.mode === "caçando" ? "#782822" : "#4d2724"; ctx.fillRect(-14, -20, 28, 42);
-      ctx.fillStyle = "#0a0808"; ctx.fillRect(-10, -17, 20, 14);
-      ctx.fillStyle = "#e94b3e"; ctx.fillRect(2, -14, 5, 5);
+      ctx.rotate(monster.angle - Math.PI);
+      const creaturePulse = Math.sin(performance.now() / 155) * 2;
+      ctx.fillStyle = "rgba(0,0,0,.68)"; ctx.beginPath(); ctx.ellipse(4, 19, 46, 19, 0, 0, Math.PI * 2); ctx.fill();
+      if (presenceSprite.complete && presenceSprite.naturalWidth > 0) {
+        ctx.drawImage(presenceSprite, -61, -40 + creaturePulse * .2, 122, 81);
+      } else {
+        ctx.strokeStyle = "#392c23"; ctx.lineWidth = 5;
+        for (const offset of [-13, 0, 13]) { ctx.beginPath(); ctx.moveTo(-6, offset); ctx.lineTo(-38, offset + creaturePulse); ctx.stroke(); }
+        ctx.fillStyle = "#0a0908"; ctx.fillRect(-18, -17, 36, 35);
+      }
+      ctx.globalCompositeOperation = "screen";
+      ctx.fillStyle = monster.mode === "caçando" ? "rgba(255,48,24,.82)" : "rgba(211,50,28,.52)";
+      ctx.beginPath(); ctx.arc(-30, -10, monster.mode === "caçando" ? 8 : 5, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
 
-      if (!game.hiddenSpot) {
-        ctx.save(); ctx.translate(game.player.x, game.player.y);
-        ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.beginPath(); ctx.ellipse(2, 13, 17, 9, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#aeb880"; ctx.fillRect(-10, -14, 20, 25);
-        ctx.fillStyle = "#d0c6a1"; ctx.fillRect(-7, -20, 14, 9);
-        ctx.fillStyle = "#596044"; ctx.fillRect(-9, 11, 7, 10); ctx.fillRect(2, 11, 7, 10);
-        ctx.rotate(game.aim); ctx.fillStyle = "#c8d37b"; ctx.fillRect(8, -3, 15, 6); ctx.restore();
-      }
       ctx.restore();
 
       const playerScreen = { x: game.player.x - game.camera.x, y: game.player.y - game.camera.y };
       ctx.save();
-      ctx.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.965)" : "rgba(0,0,0,.76)";
+      ctx.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.965)" : "rgba(0,0,0,.68)";
       ctx.fillRect(0, 0, width, height);
       ctx.globalCompositeOperation = "destination-out";
-      const glowRadius = game.hiddenSpot ? 48 : 190;
+      const glowRadius = game.hiddenSpot ? 48 : 220;
       const glow = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 16, playerScreen.x, playerScreen.y, glowRadius);
       glow.addColorStop(0, "rgba(0,0,0,.99)"); glow.addColorStop(.55, "rgba(0,0,0,.92)"); glow.addColorStop(.82, "rgba(0,0,0,.48)"); glow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
       if (game.flashlightOn && game.battery > 0 && !game.hiddenSpot) {
         ctx.save(); ctx.translate(playerScreen.x, playerScreen.y); ctx.rotate(game.aim);
-        ctx.beginPath(); ctx.moveTo(8, -16); ctx.lineTo(575, -205); ctx.lineTo(575, 205); ctx.closePath(); ctx.clip();
-        const beam = ctx.createRadialGradient(0, 0, 18, 0, 0, 590);
+        ctx.beginPath(); ctx.moveTo(9, -14); ctx.lineTo(655, -215); ctx.lineTo(655, 215); ctx.closePath(); ctx.clip();
+        const beam = ctx.createRadialGradient(0, 0, 18, 0, 0, 670);
         beam.addColorStop(0, "rgba(0,0,0,.995)"); beam.addColorStop(.48, "rgba(0,0,0,.96)"); beam.addColorStop(.78, "rgba(0,0,0,.58)"); beam.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = beam; ctx.fillRect(0, -225, 600, 450); ctx.restore();
+        ctx.fillStyle = beam; ctx.fillRect(0, -230, 680, 460); ctx.restore();
       }
       ctx.restore();
 
@@ -871,15 +969,44 @@ export default function Home() {
         ctx.save();
         ctx.globalCompositeOperation = "screen";
         const nearbyLight = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 12, playerScreen.x, playerScreen.y, glowRadius);
-        nearbyLight.addColorStop(0, "rgba(198,209,146,.12)"); nearbyLight.addColorStop(.6, "rgba(176,187,130,.07)"); nearbyLight.addColorStop(1, "rgba(0,0,0,0)");
+        nearbyLight.addColorStop(0, "rgba(226,206,143,.18)"); nearbyLight.addColorStop(.6, "rgba(186,170,116,.09)"); nearbyLight.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = nearbyLight; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
         if (game.flashlightOn && game.battery > 0) {
           ctx.translate(playerScreen.x, playerScreen.y); ctx.rotate(game.aim);
-          ctx.beginPath(); ctx.moveTo(8, -16); ctx.lineTo(575, -205); ctx.lineTo(575, 205); ctx.closePath(); ctx.clip();
-          const warmBeam = ctx.createRadialGradient(0, 0, 18, 0, 0, 590);
-          warmBeam.addColorStop(0, "rgba(222,214,155,.17)"); warmBeam.addColorStop(.52, "rgba(204,201,145,.12)"); warmBeam.addColorStop(1, "rgba(0,0,0,0)");
-          ctx.fillStyle = warmBeam; ctx.fillRect(0, -225, 600, 450);
+          ctx.beginPath(); ctx.moveTo(9, -14); ctx.lineTo(655, -215); ctx.lineTo(655, 215); ctx.closePath(); ctx.clip();
+          const warmBeam = ctx.createRadialGradient(0, 0, 18, 0, 0, 670);
+          warmBeam.addColorStop(0, "rgba(255,232,157,.3)"); warmBeam.addColorStop(.52, "rgba(230,205,134,.18)"); warmBeam.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = warmBeam; ctx.fillRect(0, -230, 680, 460);
         }
+        ctx.restore();
+
+        const monsterScreen = { x: game.monster.x - game.camera.x, y: game.monster.y - game.camera.y };
+        const monsterAngleFromPlayer = Math.atan2(game.monster.y - game.player.y, game.monster.x - game.player.x);
+        const monsterInBeam = game.flashlightOn && game.battery > 0 && distance(game.monster, game.player) < 670 &&
+          Math.abs(angleDelta(monsterAngleFromPlayer, game.aim)) < .38 && !lineBlocked(game.player, game.monster);
+        if (game.mode === "intro" || monsterInBeam) {
+          ctx.save(); ctx.translate(monsterScreen.x, monsterScreen.y); ctx.rotate(game.monster.angle - Math.PI);
+          ctx.fillStyle = "rgba(0,0,0,.72)"; ctx.beginPath(); ctx.ellipse(4, 19, 48, 19, 0, 0, Math.PI * 2); ctx.fill();
+          if (presenceSprite.complete && presenceSprite.naturalWidth > 0) ctx.drawImage(presenceSprite, -66, -44, 132, 88);
+          ctx.globalCompositeOperation = "screen";
+          ctx.shadowColor = "#ff2d18"; ctx.shadowBlur = game.monster.mode === "caçando" ? 18 : 10;
+          ctx.fillStyle = game.monster.mode === "caçando" ? "#ff3a20" : "#bd321f";
+          ctx.fillRect(-37, -12, 5, 5); ctx.fillRect(-27, -12, 5, 5);
+          ctx.restore();
+        }
+
+        ctx.save();
+        ctx.translate(playerScreen.x, playerScreen.y);
+        const facingLeft = Math.cos(game.aim) < 0;
+        const stride = Math.sin(performance.now() / 95) * (game.keys.size ? 1.5 : .35);
+        ctx.fillStyle = "rgba(0,0,0,.58)"; ctx.beginPath(); ctx.ellipse(1, 22, 23, 10, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.save(); ctx.scale(facingLeft ? -1 : 1, 1);
+        if (survivorSprite.complete && survivorSprite.naturalWidth > 0) ctx.drawImage(survivorSprite, -40, -52 + stride, 80, 90);
+        ctx.restore();
+        ctx.rotate(game.aim);
+        ctx.fillStyle = "#2b2820"; ctx.fillRect(11, -3, 20, 6);
+        ctx.fillStyle = "#fff0a7"; ctx.fillRect(27, -2, 6, 4);
+        ctx.shadowColor = "#ffe991"; ctx.shadowBlur = 12; ctx.fillRect(30, -1, 3, 2);
         ctx.restore();
       }
 
@@ -926,7 +1053,7 @@ export default function Home() {
   return (
     <main className={`game-shell mode-${mode}`}>
       <header className="topbar">
-        <div className="brand"><span>▲</span> CASA MORTA <small>UM CONTO DE SOBREVIVÊNCIA</small></div>
+        <div className="brand"><span className="brand-mark">CASA <b>MORTA</b></span><small>A CASA APRENDE SEUS PASSOS</small></div>
         <div className="timer"><small>SOBREVIVA</small>{formatTime(hud.remaining)}</div>
         <div className="top-actions">
           <div className={`status status-${hud.monster}`}><span className="status-dot" />{statusLabel}</div>
@@ -953,9 +1080,9 @@ export default function Home() {
         </>}
 
         {mode === "intro" && <div className="intro-card overlay-card">
-          <p className="eyebrow">A CASA ESCUTA</p>
-          <h1>NÃO DEIXE QUE ELA<br />APRENDA VOCÊ.</h1>
-          <p>Sobreviva por 2 minutos e 30 segundos. A cada 20 segundos seu corpo denuncia sua posição — e a criatura memoriza as salas e esconderijos que você prefere.</p>
+          <p className="eyebrow">A CASA APRENDE SEUS PASSOS</p>
+          <h1><span>CASA</span><strong>MORTA</strong></h1>
+          <p>Não deixe que ela aprenda você. Sobreviva por 2 minutos e 30 segundos enquanto a criatura memoriza suas rotas, seus ruídos e os esconderijos que você prefere.</p>
           <div className="rules"><span><b>8s</b> limite escondido</span><span><b>14s</b> para recuperar o fôlego</span><span><b>12</b> cargas espalhadas</span></div>
           <button type="button" onClick={startGame}>ENTRAR NA CASA <span>→</span></button>
           <button className="account-cta" type="button" onClick={openAccount}>{user ? "VER MEU HISTÓRICO" : "ENTRAR PARA SALVAR DESEMPENHO"}</button>
