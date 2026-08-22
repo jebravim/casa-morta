@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: casa-morta
+    runtime: static
+    buildCommand: npm ci && npm run build:render
+    staticPublishPath: ./render-dist
