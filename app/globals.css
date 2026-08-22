@@ -51,7 +51,7 @@ button { font: inherit; }
   margin: 14px;
   overflow: hidden;
   border: 1px solid #32362b;
-  box-shadow: inset 0 0 80px #000;
+  box-shadow: inset 0 0 55px rgba(0,0,0,.72);
   background: #070907;
 }
 
@@ -61,7 +61,7 @@ button { font: inherit; }
   position: absolute;
   z-index: 8;
   inset: 0;
-  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.08) 4px);
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.045) 4px);
   mix-blend-mode: multiply;
 }
 

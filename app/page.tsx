@@ -625,13 +625,13 @@ export default function Home() {
       ctx.save();
       ctx.translate(-game.camera.x, -game.camera.y);
 
-      ctx.fillStyle = "#22251e";
+      ctx.fillStyle = "#3a3e32";
       ctx.fillRect(0, 0, MAP_W, MAP_H);
       const tile = 40;
       for (let y = 40; y < MAP_H - 40; y += tile) {
         for (let x = 40; x < MAP_W - 40; x += tile) {
           const seed = ((x / tile) * 13 + (y / tile) * 7) % 5;
-          ctx.fillStyle = seed === 0 ? "#2b2d24" : seed === 1 ? "#272920" : "#25271f";
+          ctx.fillStyle = seed === 0 ? "#464a3b" : seed === 1 ? "#414537" : "#3d4134";
           ctx.fillRect(x, y, tile - 1, tile - 1);
           ctx.fillStyle = "rgba(10,12,10,.12)"; ctx.fillRect(x + 8, y, 2, tile);
         }
@@ -644,9 +644,9 @@ export default function Home() {
       }
 
       for (const wall of WALLS) {
-        ctx.fillStyle = "#161815"; ctx.fillRect(wall.x + 7, wall.y + 8, wall.w, wall.h);
-        ctx.fillStyle = "#3c372d"; ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-        ctx.fillStyle = "#5a4d39";
+        ctx.fillStyle = "#1c1f1a"; ctx.fillRect(wall.x + 7, wall.y + 8, wall.w, wall.h);
+        ctx.fillStyle = "#5e5544"; ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+        ctx.fillStyle = "#807055";
         if (wall.w > wall.h) { for (let x = wall.x; x < wall.x + wall.w; x += 42) ctx.fillRect(x, wall.y + 5, 28, 4); }
         else { for (let y = wall.y; y < wall.y + wall.h; y += 42) ctx.fillRect(wall.x + 5, y, 4, 28); }
       }
@@ -700,21 +700,37 @@ export default function Home() {
 
       const playerScreen = { x: game.player.x - game.camera.x, y: game.player.y - game.camera.y };
       ctx.save();
-      ctx.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.975)" : "rgba(0,0,0,.94)";
+      ctx.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.965)" : "rgba(0,0,0,.76)";
       ctx.fillRect(0, 0, width, height);
       ctx.globalCompositeOperation = "destination-out";
-      const glowRadius = game.hiddenSpot ? 42 : 112;
+      const glowRadius = game.hiddenSpot ? 48 : 190;
       const glow = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 16, playerScreen.x, playerScreen.y, glowRadius);
-      glow.addColorStop(0, "rgba(0,0,0,.98)"); glow.addColorStop(.62, "rgba(0,0,0,.72)"); glow.addColorStop(1, "rgba(0,0,0,0)");
+      glow.addColorStop(0, "rgba(0,0,0,.99)"); glow.addColorStop(.55, "rgba(0,0,0,.92)"); glow.addColorStop(.82, "rgba(0,0,0,.48)"); glow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
       if (game.flashlightOn && game.battery > 0 && !game.hiddenSpot) {
         ctx.save(); ctx.translate(playerScreen.x, playerScreen.y); ctx.rotate(game.aim);
-        ctx.beginPath(); ctx.moveTo(8, -12); ctx.lineTo(500, -155); ctx.lineTo(500, 155); ctx.closePath(); ctx.clip();
-        const beam = ctx.createRadialGradient(0, 0, 18, 0, 0, 510);
-        beam.addColorStop(0, "rgba(0,0,0,.98)"); beam.addColorStop(.5, "rgba(0,0,0,.8)"); beam.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = beam; ctx.fillRect(0, -190, 520, 380); ctx.restore();
+        ctx.beginPath(); ctx.moveTo(8, -16); ctx.lineTo(575, -205); ctx.lineTo(575, 205); ctx.closePath(); ctx.clip();
+        const beam = ctx.createRadialGradient(0, 0, 18, 0, 0, 590);
+        beam.addColorStop(0, "rgba(0,0,0,.995)"); beam.addColorStop(.48, "rgba(0,0,0,.96)"); beam.addColorStop(.78, "rgba(0,0,0,.58)"); beam.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = beam; ctx.fillRect(0, -225, 600, 450); ctx.restore();
       }
       ctx.restore();
+
+      if (!game.hiddenSpot) {
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        const nearbyLight = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 12, playerScreen.x, playerScreen.y, glowRadius);
+        nearbyLight.addColorStop(0, "rgba(198,209,146,.12)"); nearbyLight.addColorStop(.6, "rgba(176,187,130,.07)"); nearbyLight.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = nearbyLight; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
+        if (game.flashlightOn && game.battery > 0) {
+          ctx.translate(playerScreen.x, playerScreen.y); ctx.rotate(game.aim);
+          ctx.beginPath(); ctx.moveTo(8, -16); ctx.lineTo(575, -205); ctx.lineTo(575, 205); ctx.closePath(); ctx.clip();
+          const warmBeam = ctx.createRadialGradient(0, 0, 18, 0, 0, 590);
+          warmBeam.addColorStop(0, "rgba(222,214,155,.17)"); warmBeam.addColorStop(.52, "rgba(204,201,145,.12)"); warmBeam.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = warmBeam; ctx.fillRect(0, -225, 600, 450);
+        }
+        ctx.restore();
+      }
 
       const danger = clamp(1 - distance(game.monster, game.player) / 420, 0, 1);
       if (danger > 0) {
