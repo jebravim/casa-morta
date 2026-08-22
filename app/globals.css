@@ -44,6 +44,12 @@ button { font: inherit; }
 .status-investigando .status-dot, .status-procurando .status-dot { background: #bd9c51; box-shadow: 0 0 10px #bd9c51; }
 .status-caçando { color: #e05b4f; animation: dangerText .55s steps(2) infinite; }
 .status-caçando .status-dot { background: #d33d33; box-shadow: 0 0 13px #ff2c20; }
+.top-actions { justify-self: end; display: flex; align-items: center; gap: 16px; }
+.account-trigger { padding: 8px 11px; border: 1px solid #444837; color: #a5a990; background: #151814; font-size: 8px; letter-spacing: .11em; cursor: pointer; text-transform: uppercase; }
+.account-trigger:hover:not(:disabled) { color: #e0dec2; border-color: #747b59; }
+.account-trigger:disabled { cursor: default; opacity: .48; }
+.account-dot { display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: #5b5f51; }
+.account-dot.online { background: var(--acid); box-shadow: 0 0 8px #b9d35999; }
 
 .game-stage {
   min-height: 0;
@@ -97,6 +103,8 @@ canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; 
 }
 .intro-card button:hover, .result-card button:hover { background: #96362f; transform: translate(-1px,-1px); box-shadow: 6px 6px 0 #31110f; }
 .intro-card button span, .result-card button span { margin-left: 35px; }
+.intro-card .account-cta, .result-card .account-cta { display: block; margin: -10px 0 20px; padding: 3px 0; border: 0; color: #91977a; background: transparent; box-shadow: none; font-size: 8px; text-decoration: underline; text-underline-offset: 4px; }
+.intro-card .account-cta:hover, .result-card .account-cta:hover { color: #cbd29f; background: transparent; box-shadow: none; transform: none; }
 .keys { display: flex; gap: 12px; color: #646858; font-size: 8px; flex-wrap: wrap; }
 kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9ac96; background: #171a15; box-shadow: 0 2px 0 #000; font: inherit; }
 .rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 15px; border: 1px solid #33372d; background: #33372d; }
@@ -108,6 +116,45 @@ kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9
 .result-card p:not(.eyebrow) { margin: 18px auto 6px; }
 .result-win { border-color: var(--acid); }
 .result-win .eyebrow { color: var(--acid) !important; }
+.save-status { margin: 15px auto 4px !important; color: #8d9279 !important; font-size: 8px !important; letter-spacing: .1em; }
+.save-saved { color: var(--acid) !important; }
+.save-error { color: #d55b50 !important; }
+
+.account-overlay { position: absolute; z-index: 20; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(3,5,4,.84); backdrop-filter: blur(5px); }
+.account-card { position: relative; width: min(610px, 94vw); max-height: min(720px, calc(100vh - 120px)); overflow: auto; padding: 30px; border: 1px solid #4a4f3d; border-top: 3px solid var(--blood); color: #d7d5bb; background: linear-gradient(145deg, #111510 0%, #0b0e0c 100%); box-shadow: 18px 22px 70px #000; }
+.account-card h2 { margin: 0; font-family: Georgia, serif; font-size: clamp(28px, 4vw, 46px); letter-spacing: -.035em; }
+.account-copy, .account-email { color: #848977; font-size: 10px; line-height: 1.6; }
+.account-email { margin: 7px 0 18px; color: #aeb299; }
+.account-close { position: absolute; top: 13px; right: 15px; width: 34px; height: 34px; border: 1px solid #464a3b; color: #9a9e88; background: #151814; font-size: 20px; cursor: pointer; }
+.account-close:hover { color: #fffde0; border-color: #7b805f; }
+.auth-form { display: grid; gap: 13px; margin-top: 20px; }
+.auth-form label { display: grid; gap: 6px; color: #777c69; font-size: 8px; letter-spacing: .13em; }
+.auth-form input { width: 100%; padding: 12px 13px; border: 1px solid #454a39; outline: none; color: #e0dec4; background: #090c09; font: inherit; font-size: 11px; }
+.auth-form input:focus { border-color: #909b5d; box-shadow: 0 0 0 2px #8b965026; }
+.account-primary, .account-secondary, .account-switch { border: 1px solid #854139; color: #e1dfc3; background: #6f2924; font: inherit; font-weight: 800; font-size: 9px; letter-spacing: .12em; cursor: pointer; }
+.account-primary { padding: 13px 16px; margin-top: 3px; }
+.account-primary:hover:not(:disabled) { background: #8d332d; }
+.account-primary:disabled, .account-secondary:disabled { opacity: .55; cursor: wait; }
+.account-switch { display: block; margin: 16px auto 0; padding: 5px; border: 0; color: #8f947d; background: transparent; text-decoration: underline; text-underline-offset: 4px; }
+.account-switch:hover { color: #c9cda9; }
+.auth-error { margin: 0; padding: 9px 11px; border-left: 2px solid var(--blood); color: #d48a82; background: #271310; font-size: 9px; line-height: 1.5; }
+.account-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 18px 0; border: 1px solid #34382d; background: #34382d; }
+.account-summary span { padding: 11px; color: #727764; background: #111410; font-size: 7px; text-transform: uppercase; }
+.account-summary b { display: block; margin-bottom: 4px; color: #cdd0ad; font-size: 15px; }
+.history-list { display: grid; gap: 8px; max-height: 310px; overflow: auto; padding-right: 4px; }
+.history-row { padding: 12px 14px; border: 1px solid #33372c; border-left: 3px solid #76332d; background: #0d100d; }
+.history-row.history-won { border-left-color: #92a357; }
+.history-row > div { display: flex; justify-content: space-between; gap: 15px; }
+.history-row > div b { color: #c6c9a9; font-size: 9px; letter-spacing: .11em; }
+.history-row.history-won > div b { color: #c3d475; }
+.history-row time { color: #686d5b; font-size: 8px; }
+.history-row dl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 11px 0 0; }
+.history-row dl div { display: block; }
+.history-row dt { color: #5d6251; font-size: 7px; }
+.history-row dd { margin: 3px 0 0; color: #a8ac91; font-size: 10px; }
+.history-empty { padding: 26px 12px; color: #777c68; border: 1px dashed #3e4235; text-align: center; font-size: 9px; line-height: 1.6; }
+.account-secondary { display: block; margin: 18px 0 0 auto; padding: 8px 10px; border-color: #464a3b; color: #888d77; background: transparent; }
+.account-secondary:hover { color: #d6d5ba; }
 
 .room-tag, .memory-panel, .noise-clock, .objective, .charge, .stamina, .breath-meter {
   position: absolute;
@@ -157,10 +204,12 @@ kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9
 
 @media (max-width: 800px) {
   .game-shell { grid-template-rows: 58px 1fr; }
-  .topbar { padding: 0 11px; grid-template-columns: 1fr auto; }
+  .topbar { padding: 0 9px; grid-template-columns: 1fr auto auto; gap: 7px; }
   .brand { font-size: 11px; }
   .brand small, .status { display: none; }
   .timer { min-width: 106px; padding: 6px 10px; font-size: 15px; }
+  .top-actions { gap: 0; }
+  .account-trigger { max-width: 88px; overflow: hidden; padding: 7px 8px; white-space: nowrap; text-overflow: ellipsis; }
   .game-stage { margin: 6px; }
   .intro-card { left: 5%; width: 90%; padding: 24px; }
   .intro-card h1 { font-size: 36px; }
@@ -173,6 +222,11 @@ kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9
   .interaction-prompt { bottom: 107px; font-size: 8px; max-width: 85%; white-space: normal; text-align: center; }
   .breath-meter { bottom: 106px; width: 210px; }
   .game-message { top: 16%; width: 84%; font-size: 9px; }
+  .account-overlay { padding: 8px; }
+  .account-card { max-height: calc(100vh - 76px); padding: 24px 18px; }
+  .account-summary { grid-template-columns: 1fr 1fr; }
+  .account-summary span:last-child { grid-column: 1 / -1; }
+  .history-row dl { grid-template-columns: repeat(2, 1fr); }
   .mobile-controls { display: flex; position: absolute; z-index: 7; inset: auto 10px 10px 10px; justify-content: space-between; pointer-events: none; }
   .mobile-controls button { pointer-events: auto; touch-action: none; border: 1px solid #6b705b; background: #111510bb; color: #b9bea0; font-size: 12px; width: 46px; height: 42px; }
   .dpad { width: 142px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }

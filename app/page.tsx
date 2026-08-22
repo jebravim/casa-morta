@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+
+import { neon, type GameSessionRecord, type PlayerAccount } from "../lib/neon";
 
 type Point = { x: number; y: number };
 type Rect = Point & { w: number; h: number };
 type Mode = "intro" | "running" | "won" | "lost";
 type MonsterMode = "espreitando" | "investigando" | "caçando" | "procurando";
+type AccountView = "signin" | "signup" | "history";
 
 type HidingSpot = Rect & {
   id: string;
@@ -53,6 +56,9 @@ type Game = {
   noisePulse: (Point & { life: number }) | null;
   batteries: Battery[];
   collected: number;
+  hidingSeconds: number;
+  flashlightSeconds: number;
+  visitedRooms: Set<string>;
   message: string;
   messageUntil: number;
   hudClock: number;
@@ -252,7 +258,8 @@ function makeGame(): Game {
     mode: "intro", elapsed: 0, player: { x: 925, y: 1450 }, aim: -Math.PI / 2,
     camera: { x: 0, y: 0 }, keys: new Set(), flashlightOn: true, battery: 68, stamina: 100,
     hiddenSpot: null, hideRemaining: 8, hideCooldown: 0, hideUses, roomHeat, heatClock: 0,
-    noiseIndex: 0, noisePulse: null, collected: 0, batteries: BATTERY_POSITIONS.map((point) => ({ ...point, taken: false })),
+    noiseIndex: 0, noisePulse: null, collected: 0, hidingSeconds: 0, flashlightSeconds: 0,
+    visitedRooms: new Set(["PORÃO"]), batteries: BATTERY_POSITIONS.map((point) => ({ ...point, taken: false })),
     message: "", messageUntil: 0, hudClock: 0, lastFrame: performance.now(), audio: null,
     monster: {
       x: 210, y: 280, mode: "espreitando", angle: 0, target: { x: 930, y: 270 },
@@ -269,6 +276,18 @@ const initialHud: Hud = {
 function formatTime(seconds: number) {
   const safe = Math.max(0, Math.ceil(seconds));
   return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`;
+}
+
+function formatPlayedAt(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+
+function friendlyAuthError(rawMessage: string, view: AccountView) {
+  const message = rawMessage.toLowerCase();
+  if (message.includes("invalid") || message.includes("credential")) return "E-mail ou senha incorretos.";
+  if (message.includes("already") || message.includes("exist")) return "Este e-mail já possui uma conta.";
+  if (message.includes("password")) return "Use uma senha com pelo menos 8 caracteres.";
+  return view === "signup" ? "Não foi possível criar a conta agora." : "Não foi possível entrar agora.";
 }
 
 function message(game: Game, text: string, duration = 2.6) {
@@ -315,10 +334,135 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
   const animationRef = useRef<number>(0);
+  const userRef = useRef<PlayerAccount | null>(null);
+  const saveGameSessionRef = useRef<(game: Game, result: "won" | "lost") => void>(() => undefined);
   const [mode, setMode] = useState<Mode>("intro");
   const [hud, setHud] = useState<Hud>(initialHud);
+  const [user, setUser] = useState<PlayerAccount | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountView, setAccountView] = useState<AccountView>("signin");
+  const [authChecking, setAuthChecking] = useState(true);
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [authError, setAuthError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [playerName, setPlayerName] = useState("");
+  const [history, setHistory] = useState<GameSessionRecord[]>([]);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   if (gameRef.current === null && typeof window !== "undefined") gameRef.current = makeGame();
+
+  const loadHistory = useCallback(async () => {
+    if (!userRef.current) return;
+    setHistoryLoading(true);
+    const { data, error } = await neon
+      .from("game_sessions")
+      .select("id, played_at, result, survival_seconds, batteries_collected, noise_events, hiding_seconds, flashlight_seconds, rooms_visited")
+      .order("played_at", { ascending: false })
+      .limit(8);
+    if (error) setAuthError("Não foi possível carregar seu histórico agora.");
+    else setHistory((data ?? []) as GameSessionRecord[]);
+    setHistoryLoading(false);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    neon.auth.getSession().then((result) => {
+      if (!active) return;
+      const authData = result.data as { user?: PlayerAccount; session?: unknown } | null;
+      const nextUser = authData?.session && authData.user ? authData.user : null;
+      userRef.current = nextUser;
+      setUser(nextUser);
+      setAccountView(nextUser ? "history" : "signin");
+      setAuthChecking(false);
+      if (nextUser) void loadHistory();
+    }).catch(() => {
+      if (active) setAuthChecking(false);
+    });
+    return () => { active = false; };
+  }, [loadHistory]);
+
+  const openAccount = useCallback(() => {
+    setAuthError("");
+    setAccountView(userRef.current ? "history" : "signin");
+    setAccountOpen(true);
+    if (userRef.current) void loadHistory();
+  }, [loadHistory]);
+
+  const handleAuthSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAccountBusy(true);
+    setAuthError("");
+    try {
+      const result = accountView === "signup"
+        ? await neon.auth.signUp.email({ name: playerName.trim() || email.split("@")[0] || "Sobrevivente", email: email.trim(), password })
+        : await neon.auth.signIn.email({ email: email.trim(), password });
+      if (result.error) {
+        setAuthError(friendlyAuthError(result.error.message || "", accountView));
+        return;
+      }
+      const sessionResult = await neon.auth.getSession();
+      const authData = sessionResult.data as { user?: PlayerAccount; session?: unknown } | null;
+      if (!authData?.session || !authData.user) {
+        setAccountView("signin");
+        setAuthError("Conta criada. Verifique seu e-mail e entre para continuar.");
+        return;
+      }
+      userRef.current = authData.user;
+      setUser(authData.user);
+      setAccountView("history");
+      setPassword("");
+      await loadHistory();
+    } catch {
+      setAuthError("A casa bloqueou a conexão. Tente novamente em instantes.");
+    } finally {
+      setAccountBusy(false);
+    }
+  }, [accountView, email, loadHistory, password, playerName]);
+
+  const signOut = useCallback(async () => {
+    setAccountBusy(true);
+    const result = await neon.auth.signOut();
+    if (result.error) {
+      setAuthError(result.error.message || "Não foi possível sair agora.");
+    } else {
+      userRef.current = null;
+      setUser(null);
+      setHistory([]);
+      setAccountView("signin");
+      setAccountOpen(false);
+    }
+    setAccountBusy(false);
+  }, []);
+
+  const saveGameSession = useCallback((game: Game, result: "won" | "lost") => {
+    if (!userRef.current) return;
+    setSaveState("saving");
+    void (async () => {
+      try {
+        const { error } = await neon.from("game_sessions").insert({
+          result,
+          survival_seconds: Math.min(150, Math.max(0, Math.round(game.elapsed))),
+          batteries_collected: game.collected,
+          noise_events: game.noiseIndex,
+          hiding_seconds: Number(game.hidingSeconds.toFixed(2)),
+          flashlight_seconds: Number(game.flashlightSeconds.toFixed(2)),
+          rooms_visited: Math.max(1, game.visitedRooms.size),
+        });
+        if (error) {
+          setSaveState("error");
+          return;
+        }
+        setSaveState("saved");
+        void loadHistory();
+      } catch {
+        setSaveState("error");
+      }
+    })();
+  }, [loadHistory]);
+
+  saveGameSessionRef.current = saveGameSession;
 
   const toggleFlashlight = useCallback(() => {
     const game = gameRef.current;
@@ -362,6 +506,7 @@ export default function Home() {
     } catch { fresh.audio = null; }
     gameRef.current = fresh;
     setHud(initialHud);
+    setSaveState("idle");
     setMode("running");
   }, []);
 
@@ -411,6 +556,7 @@ export default function Home() {
       game.mode = result;
       game.keys.clear();
       setMode(result);
+      saveGameSessionRef.current(game, result);
       tone(game, result === "won" ? 420 : 46, result === "won" ? 1.2 : 1.8, .075, result === "won" ? "sine" : "sawtooth");
     };
 
@@ -426,6 +572,7 @@ export default function Home() {
 
       game.hideCooldown = Math.max(0, game.hideCooldown - dt);
       if (game.hiddenSpot) {
+        game.hidingSeconds += dt;
         game.hideRemaining -= dt;
         if (game.hideRemaining <= 0) {
           game.hiddenSpot = null;
@@ -459,6 +606,7 @@ export default function Home() {
       }
 
       if (game.flashlightOn && game.battery > 0 && !game.hiddenSpot) {
+        game.flashlightSeconds += dt;
         game.battery = Math.max(0, game.battery - .78 * dt);
         if (game.battery === 0) { game.flashlightOn = false; message(game, "A LUZ MORREU"); }
       }
@@ -477,7 +625,10 @@ export default function Home() {
       if (game.heatClock >= 1) {
         game.heatClock = 0;
         const room = currentRoom(game.player);
-        if (game.roomHeat[room.name] !== undefined) game.roomHeat[room.name] += 1;
+        if (game.roomHeat[room.name] !== undefined) {
+          game.visitedRooms.add(room.name);
+          game.roomHeat[room.name] += 1;
+        }
       }
 
       const noiseIndex = Math.floor(game.elapsed / 20);
@@ -769,13 +920,21 @@ export default function Home() {
   };
 
   const statusLabel = hud.monster === "caçando" ? "PERSEGUIÇÃO" : hud.monster === "investigando" ? "ELA OUVIU" : hud.monster === "procurando" ? "PROCURANDO VOCÊ" : "PRESENÇA À ESPREITA";
+  const victories = history.filter((entry) => entry.result === "won").length;
+  const bestSurvival = history.reduce((best, entry) => Math.max(best, entry.survival_seconds), 0);
 
   return (
     <main className={`game-shell mode-${mode}`}>
       <header className="topbar">
         <div className="brand"><span>▲</span> CASA MORTA <small>UM CONTO DE SOBREVIVÊNCIA</small></div>
         <div className="timer"><small>SOBREVIVA</small>{formatTime(hud.remaining)}</div>
-        <div className={`status status-${hud.monster}`}><span className="status-dot" />{statusLabel}</div>
+        <div className="top-actions">
+          <div className={`status status-${hud.monster}`}><span className="status-dot" />{statusLabel}</div>
+          <button className="account-trigger" type="button" onClick={openAccount} disabled={authChecking || mode === "running"}>
+            <span className={user ? "account-dot online" : "account-dot"} />
+            {authChecking ? "CONECTANDO" : user ? (user.name || user.email.split("@")[0]).slice(0, 16) : "CONTA"}
+          </button>
+        </div>
       </header>
 
       <section className="game-stage" aria-label="Jogo Casa Morta">
@@ -799,19 +958,67 @@ export default function Home() {
           <p>Sobreviva por 2 minutos e 30 segundos. A cada 20 segundos seu corpo denuncia sua posição — e a criatura memoriza as salas e esconderijos que você prefere.</p>
           <div className="rules"><span><b>8s</b> limite escondido</span><span><b>14s</b> para recuperar o fôlego</span><span><b>12</b> cargas espalhadas</span></div>
           <button type="button" onClick={startGame}>ENTRAR NA CASA <span>→</span></button>
+          <button className="account-cta" type="button" onClick={openAccount}>{user ? "VER MEU HISTÓRICO" : "ENTRAR PARA SALVAR DESEMPENHO"}</button>
           <div className="keys"><span><kbd>WASD</kbd> MOVER</span><span><kbd>SHIFT</kbd> CORRER</span><span><kbd>MOUSE</kbd> MIRAR</span><span><kbd>F</kbd> LUZ</span><span><kbd>E</kbd> ESCONDER</span></div>
         </div>}
 
         {mode === "won" && <div className="result-card result-win">
           <p className="eyebrow">02:30 — AMANHECER</p><h2>VOCÊ SOBREVIVEU.</h2>
           <p>A porta finalmente cedeu. A casa conhece seus passos agora, mas não conseguiu guardá-los.</p>
+          {user ? <p className={`save-status save-${saveState}`}>{saveState === "saving" ? "SALVANDO ESTA SESSÃO..." : saveState === "saved" ? "SESSÃO SALVA NO SEU HISTÓRICO" : saveState === "error" ? "NÃO FOI POSSÍVEL SALVAR ESTA SESSÃO" : ""}</p> : <button className="account-cta" type="button" onClick={openAccount}>ENTRAR PARA SALVAR AS PRÓXIMAS PARTIDAS</button>}
           <button type="button" onClick={startGame}>JOGAR NOVAMENTE <span>↻</span></button>
         </div>}
 
         {mode === "lost" && <div className="result-card result-lose">
           <p className="eyebrow">A CASA APRENDEU</p><h2>ELA ENCONTROU VOCÊ.</h2>
           <p>Repita menos suas rotas. Apague a lanterna quando puder. Nunca confie duas vezes no mesmo esconderijo.</p>
+          {user ? <p className={`save-status save-${saveState}`}>{saveState === "saving" ? "SALVANDO ESTA SESSÃO..." : saveState === "saved" ? "SESSÃO SALVA NO SEU HISTÓRICO" : saveState === "error" ? "NÃO FOI POSSÍVEL SALVAR ESTA SESSÃO" : ""}</p> : <button className="account-cta" type="button" onClick={openAccount}>ENTRAR PARA SALVAR AS PRÓXIMAS PARTIDAS</button>}
           <button type="button" onClick={startGame}>TENTAR NOVAMENTE <span>↻</span></button>
+        </div>}
+
+        {accountOpen && <div className="account-overlay">
+          <section className="account-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
+            <button className="account-close" type="button" aria-label="Fechar conta" onClick={() => setAccountOpen(false)}>×</button>
+            {accountView === "history" && user ? <>
+              <p className="eyebrow">ARQUIVO DO SOBREVIVENTE</p>
+              <h2 id="account-title">SEU HISTÓRICO</h2>
+              <p className="account-email">{user.email}</p>
+              <div className="account-summary">
+                <span><b>{history.length}</b> sessões recentes</span>
+                <span><b>{victories}</b> sobrevivências</span>
+                <span><b>{formatTime(bestSurvival)}</b> melhor tempo</span>
+              </div>
+              <div className="history-list" aria-live="polite">
+                {historyLoading && <p className="history-empty">BUSCANDO REGISTROS...</p>}
+                {!historyLoading && history.length === 0 && <p className="history-empty">Nenhuma partida salva. A casa ainda não conhece seu nome.</p>}
+                {!historyLoading && history.map((entry) => <article className={`history-row history-${entry.result}`} key={entry.id}>
+                  <div><b>{entry.result === "won" ? "SOBREVIVEU" : "ENCONTRADO"}</b><time dateTime={entry.played_at}>{formatPlayedAt(entry.played_at)}</time></div>
+                  <dl>
+                    <div><dt>TEMPO</dt><dd>{formatTime(entry.survival_seconds)}</dd></div>
+                    <div><dt>CARGAS</dt><dd>{entry.batteries_collected}/12</dd></div>
+                    <div><dt>SALAS</dt><dd>{entry.rooms_visited}/12</dd></div>
+                    <div><dt>ESCONDIDO</dt><dd>{Math.round(Number(entry.hiding_seconds))}s</dd></div>
+                  </dl>
+                </article>)}
+              </div>
+              {authError && <p className="auth-error">{authError}</p>}
+              <button className="account-secondary" type="button" disabled={accountBusy} onClick={signOut}>SAIR DA CONTA</button>
+            </> : <>
+              <p className="eyebrow">REGISTRE SEUS PASSOS</p>
+              <h2 id="account-title">{accountView === "signup" ? "CRIAR CONTA" : "ENTRAR"}</h2>
+              <p className="account-copy">Salve cada fuga e acompanhe como você melhora contra a Presença.</p>
+              <form className="auth-form" onSubmit={handleAuthSubmit}>
+                {accountView === "signup" && <label>NOME DE SOBREVIVENTE<input value={playerName} onChange={(event) => setPlayerName(event.target.value)} autoComplete="name" maxLength={40} /></label>}
+                <label>E-MAIL<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
+                <label>SENHA<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={accountView === "signup" ? "new-password" : "current-password"} minLength={8} required /></label>
+                {authError && <p className="auth-error">{authError}</p>}
+                <button className="account-primary" type="submit" disabled={accountBusy}>{accountBusy ? "AGUARDE..." : accountView === "signup" ? "CRIAR E ENTRAR" : "ENTRAR NA CONTA"}</button>
+              </form>
+              <button className="account-switch" type="button" onClick={() => { setAuthError(""); setAccountView(accountView === "signup" ? "signin" : "signup"); }}>
+                {accountView === "signup" ? "JÁ TENHO CONTA" : "CRIAR UMA CONTA"}
+              </button>
+            </>}
+          </section>
         </div>}
 
         {mode === "running" && <div className="mobile-controls" aria-label="Controles de toque">
