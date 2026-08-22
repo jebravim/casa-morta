@@ -18,8 +18,13 @@ type HidingSpot = Rect & {
 };
 
 type Furniture = Rect & {
-  kind: "bed" | "wardrobe" | "shelf" | "table" | "sofa" | "crate" | "piano" | "counter";
+  kind: "bed" | "wardrobe" | "shelf" | "table" | "sofa" | "crate" | "piano" | "counter" |
+    "stairs" | "fireplace" | "stove" | "sink" | "bathtub" | "dresser" | "desk" | "clock";
 };
+
+type Doorway = Point & { length: number; axis: "horizontal" | "vertical"; swing: -1 | 1 };
+type WindowFrame = Point & { length: number; axis: "horizontal" | "vertical" };
+type Chair = Rect & { angle: number };
 
 type Battery = Point & { taken: boolean };
 
@@ -87,18 +92,18 @@ const MAP_H = 1600;
 const PLAYER_RADIUS = 14;
 
 const ROOMS = [
-  { name: "QUARTO VAZIO", x: 40, y: 40, w: 560, h: 480 },
-  { name: "BIBLIOTECA", x: 628, y: 40, w: 572, h: 480 },
-  { name: "QUARTO DA CRIANÇA", x: 1228, y: 40, w: 572, h: 480 },
-  { name: "ATELIÊ", x: 1828, y: 40, w: 532, h: 480 },
-  { name: "COZINHA", x: 40, y: 548, w: 560, h: 502 },
-  { name: "HALL CENTRAL", x: 628, y: 548, w: 572, h: 502 },
-  { name: "SALA DE JANTAR", x: 1228, y: 548, w: 572, h: 502 },
-  { name: "ESCRITÓRIO", x: 1828, y: 548, w: 532, h: 502 },
-  { name: "DESPENSA", x: 40, y: 1078, w: 560, h: 482 },
-  { name: "PORÃO", x: 628, y: 1078, w: 572, h: 482 },
-  { name: "LAVANDERIA", x: 1228, y: 1078, w: 572, h: 482 },
-  { name: "SALA SELADA", x: 1828, y: 1078, w: 532, h: 482 },
+  { name: "QUARTO PRINCIPAL", floor: "wood", x: 40, y: 40, w: 560, h: 480 },
+  { name: "BIBLIOTECA", floor: "parquet", x: 628, y: 40, w: 572, h: 480 },
+  { name: "QUARTO DA CRIANÇA", floor: "wood", x: 1228, y: 40, w: 572, h: 480 },
+  { name: "ATELIÊ", floor: "stone", x: 1828, y: 40, w: 532, h: 480 },
+  { name: "COZINHA", floor: "tile", x: 40, y: 548, w: 560, h: 502 },
+  { name: "HALL CENTRAL", floor: "parquet", x: 628, y: 548, w: 572, h: 502 },
+  { name: "SALA DE JANTAR", floor: "wood", x: 1228, y: 548, w: 572, h: 502 },
+  { name: "ESCRITÓRIO", floor: "parquet", x: 1828, y: 548, w: 532, h: 502 },
+  { name: "DESPENSA", floor: "stone", x: 40, y: 1078, w: 560, h: 482 },
+  { name: "PORÃO", floor: "stone", x: 628, y: 1078, w: 572, h: 482 },
+  { name: "LAVANDERIA", floor: "tile", x: 1228, y: 1078, w: 572, h: 482 },
+  { name: "SALA SELADA", floor: "stone", x: 1828, y: 1078, w: 532, h: 482 },
 ];
 
 const WALLS: Rect[] = [
@@ -147,6 +152,17 @@ const FURNITURE: Furniture[] = [
   { kind: "crate", x: 220, y: 1260, w: 92, h: 92 }, { kind: "shelf", x: 810, y: 1120, w: 260, h: 54 },
   { kind: "table", x: 930, y: 1280, w: 150, h: 90 }, { kind: "counter", x: 1280, y: 1125, w: 220, h: 62 },
   { kind: "counter", x: 1280, y: 1460, w: 290, h: 60 }, { kind: "table", x: 1950, y: 1270, w: 170, h: 100 },
+  { kind: "dresser", x: 205, y: 68, w: 125, h: 55 }, { kind: "fireplace", x: 515, y: 300, w: 68, h: 128 },
+  { kind: "shelf", x: 925, y: 76, w: 125, h: 52 }, { kind: "fireplace", x: 1088, y: 278, w: 82, h: 128 },
+  { kind: "dresser", x: 1252, y: 72, w: 108, h: 54 }, { kind: "crate", x: 1655, y: 388, w: 82, h: 72 },
+  { kind: "dresser", x: 1848, y: 70, w: 115, h: 52 }, { kind: "table", x: 2180, y: 390, w: 130, h: 74 },
+  { kind: "stove", x: 58, y: 588, w: 86, h: 70 }, { kind: "sink", x: 158, y: 588, w: 86, h: 70 },
+  { kind: "stairs", x: 1040, y: 585, w: 118, h: 285 }, { kind: "clock", x: 650, y: 850, w: 54, h: 132 },
+  { kind: "dresser", x: 1680, y: 570, w: 88, h: 220 }, { kind: "fireplace", x: 2268, y: 590, w: 68, h: 145 },
+  { kind: "shelf", x: 72, y: 1390, w: 210, h: 52 }, { kind: "counter", x: 520, y: 1150, w: 58, h: 220 },
+  { kind: "counter", x: 1100, y: 1150, w: 68, h: 220 }, { kind: "bathtub", x: 1535, y: 1110, w: 110, h: 78 },
+  { kind: "sink", x: 1655, y: 1450, w: 95, h: 62 }, { kind: "sofa", x: 1895, y: 1120, w: 220, h: 58 },
+  { kind: "sofa", x: 1895, y: 1450, w: 220, h: 58 },
 ];
 
 const RUGS: Rect[] = [
@@ -163,11 +179,63 @@ const STAINS: (Point & { rx: number; ry: number })[] = [
   { x: 460, y: 1190, rx: 64, ry: 22 }, { x: 1440, y: 1380, rx: 90, ry: 32 },
 ];
 
+const DOORWAYS: Doorway[] = [
+  { x: 614, y: 215, length: 120, axis: "vertical", swing: 1 },
+  { x: 614, y: 725, length: 120, axis: "vertical", swing: -1 },
+  { x: 614, y: 1210, length: 120, axis: "vertical", swing: 1 },
+  { x: 1214, y: 375, length: 120, axis: "vertical", swing: -1 },
+  { x: 1214, y: 685, length: 120, axis: "vertical", swing: 1 },
+  { x: 1214, y: 1245, length: 120, axis: "vertical", swing: -1 },
+  { x: 1814, y: 245, length: 120, axis: "vertical", swing: 1 },
+  { x: 1814, y: 735, length: 120, axis: "vertical", swing: -1 },
+  { x: 1814, y: 1170, length: 120, axis: "vertical", swing: 1 },
+  { x: 285, y: 534, length: 120, axis: "horizontal", swing: -1 },
+  { x: 860, y: 534, length: 120, axis: "horizontal", swing: 1 },
+  { x: 1440, y: 534, length: 120, axis: "horizontal", swing: -1 },
+  { x: 2000, y: 534, length: 120, axis: "horizontal", swing: 1 },
+  { x: 405, y: 1064, length: 120, axis: "horizontal", swing: 1 },
+  { x: 920, y: 1064, length: 120, axis: "horizontal", swing: -1 },
+  { x: 1480, y: 1064, length: 120, axis: "horizontal", swing: 1 },
+  { x: 2010, y: 1064, length: 120, axis: "horizontal", swing: -1 },
+];
+
+const WINDOWS: WindowFrame[] = [
+  { x: 190, y: 20, length: 145, axis: "horizontal" }, { x: 770, y: 20, length: 150, axis: "horizontal" },
+  { x: 1400, y: 20, length: 145, axis: "horizontal" }, { x: 2020, y: 20, length: 145, axis: "horizontal" },
+  { x: 190, y: 1580, length: 145, axis: "horizontal" }, { x: 760, y: 1580, length: 145, axis: "horizontal" },
+  { x: 1420, y: 1580, length: 145, axis: "horizontal" }, { x: 2050, y: 1580, length: 145, axis: "horizontal" },
+  { x: 20, y: 260, length: 130, axis: "vertical" }, { x: 20, y: 735, length: 145, axis: "vertical" },
+  { x: 2380, y: 260, length: 130, axis: "vertical" }, { x: 2380, y: 760, length: 145, axis: "vertical" },
+];
+
+const CHAIRS: Chair[] = [
+  { x: 815, y: 185, w: 36, h: 36, angle: 0 }, { x: 1010, y: 245, w: 36, h: 36, angle: Math.PI / 2 },
+  { x: 200, y: 770, w: 38, h: 38, angle: 0 }, { x: 395, y: 842, w: 38, h: 38, angle: Math.PI / 2 },
+  { x: 1420, y: 654, w: 40, h: 40, angle: 0 }, { x: 1510, y: 654, w: 40, h: 40, angle: 0 },
+  { x: 1600, y: 654, w: 40, h: 40, angle: 0 }, { x: 1420, y: 810, w: 40, h: 40, angle: Math.PI },
+  { x: 1510, y: 810, w: 40, h: 40, angle: Math.PI }, { x: 1600, y: 810, w: 40, h: 40, angle: Math.PI },
+  { x: 1340, y: 735, w: 40, h: 40, angle: -Math.PI / 2 }, { x: 1672, y: 735, w: 40, h: 40, angle: Math.PI / 2 },
+  { x: 1938, y: 715, w: 38, h: 38, angle: 0 }, { x: 2150, y: 780, w: 38, h: 38, angle: Math.PI / 2 },
+];
+
+const PORTRAITS: Rect[] = [
+  { x: 410, y: 54, w: 58, h: 38 }, { x: 1055, y: 53, w: 52, h: 36 },
+  { x: 1540, y: 55, w: 58, h: 38 }, { x: 2100, y: 55, w: 55, h: 38 },
+  { x: 645, y: 570, w: 38, h: 58 }, { x: 1740, y: 568, w: 40, h: 56 },
+  { x: 2290, y: 820, w: 38, h: 58 }, { x: 1838, y: 1180, w: 38, h: 58 },
+];
+
+const HOUSE_LIGHTS: Point[] = [
+  { x: 290, y: 155 }, { x: 900, y: 160 }, { x: 1500, y: 130 }, { x: 2050, y: 135 },
+  { x: 340, y: 700 }, { x: 820, y: 620 }, { x: 1515, y: 620 }, { x: 2090, y: 620 },
+  { x: 340, y: 1140 }, { x: 890, y: 1140 }, { x: 1480, y: 1140 }, { x: 2070, y: 1140 },
+];
+
 const SOLIDS: Rect[] = [...WALLS, ...FURNITURE];
 
 const BATTERY_POSITIONS: Point[] = [
   { x: 275, y: 275 }, { x: 1015, y: 365 }, { x: 1575, y: 345 }, { x: 2090, y: 420 },
-  { x: 545, y: 970 }, { x: 1100, y: 780 }, { x: 1740, y: 920 }, { x: 2200, y: 680 },
+  { x: 545, y: 970 }, { x: 940, y: 640 }, { x: 1740, y: 920 }, { x: 2200, y: 680 },
   { x: 285, y: 1465 }, { x: 1130, y: 1430 }, { x: 1510, y: 1210 }, { x: 2140, y: 1460 },
 ];
 
@@ -787,6 +855,58 @@ export default function Home() {
         target.fillStyle = "#493721"; target.fillRect(item.x, item.y, item.w, item.h);
         target.strokeStyle = "#72583a"; target.lineWidth = 5; target.strokeRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
         target.beginPath(); target.moveTo(item.x + 8, item.y + 8); target.lineTo(item.x + item.w - 8, item.y + item.h - 8); target.moveTo(item.x + item.w - 8, item.y + 8); target.lineTo(item.x + 8, item.y + item.h - 8); target.stroke();
+      } else if (item.kind === "stairs") {
+        target.fillStyle = "#211b16"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.strokeStyle = "#6d5a40"; target.lineWidth = 4; target.strokeRect(item.x + 4, item.y + 4, item.w - 8, item.h - 8);
+        const steps = 11;
+        for (let step = 0; step < steps; step++) {
+          const y = item.y + 9 + step * ((item.h - 18) / steps);
+          target.fillStyle = step % 2 ? "#463728" : "#51402e";
+          target.fillRect(item.x + 10, y, item.w - 20, (item.h - 24) / steps - 2);
+          target.fillStyle = "rgba(164,133,88,.18)"; target.fillRect(item.x + 13, y + 2, item.w - 26, 2);
+        }
+        target.strokeStyle = "#8a704d"; target.lineWidth = 5;
+        target.beginPath(); target.moveTo(item.x + 8, item.y + 6); target.lineTo(item.x + 8, item.y + item.h - 6); target.moveTo(item.x + item.w - 8, item.y + 6); target.lineTo(item.x + item.w - 8, item.y + item.h - 6); target.stroke();
+      } else if (item.kind === "fireplace") {
+        target.fillStyle = "#4c473b"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.fillStyle = "#24211c"; target.fillRect(item.x + 11, item.y + 20, item.w - 22, item.h - 34);
+        target.strokeStyle = "#766b56"; target.lineWidth = 5; target.strokeRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
+        target.fillStyle = "#3f1712"; target.fillRect(item.x + 17, item.y + item.h - 45, item.w - 34, 22);
+        target.fillStyle = "#b34b26"; target.fillRect(item.x + 23, item.y + item.h - 37, item.w - 46, 7);
+        target.fillStyle = "#8b7858"; target.fillRect(item.x - 5, item.y, item.w + 10, 12);
+      } else if (item.kind === "stove") {
+        target.fillStyle = "#3b3c37"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.strokeStyle = "#79786d"; target.lineWidth = 3; target.strokeRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
+        for (const [ox, oy] of [[.28, .32], [.7, .32], [.28, .7], [.7, .7]]) {
+          target.fillStyle = "#191a18"; target.beginPath(); target.arc(item.x + item.w * ox, item.y + item.h * oy, 9, 0, Math.PI * 2); target.fill();
+          target.strokeStyle = "#66645a"; target.lineWidth = 2; target.stroke();
+        }
+      } else if (item.kind === "sink") {
+        target.fillStyle = "#4b4b43"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.fillStyle = "#232a28"; target.fillRect(item.x + 11, item.y + 12, item.w - 22, item.h - 25);
+        target.strokeStyle = "#858477"; target.lineWidth = 3; target.strokeRect(item.x + 8, item.y + 8, item.w - 16, item.h - 16);
+        target.fillStyle = "#aba890"; target.fillRect(item.x + item.w / 2 - 3, item.y + 5, 6, 16);
+      } else if (item.kind === "bathtub") {
+        target.fillStyle = "#77776c"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.fillStyle = "#303633"; target.fillRect(item.x + 10, item.y + 10, item.w - 20, item.h - 20);
+        target.strokeStyle = "#a29f88"; target.lineWidth = 4; target.strokeRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
+        target.fillStyle = "#b1aa86"; target.fillRect(item.x + item.w - 20, item.y + 7, 5, 13);
+      } else if (item.kind === "dresser" || item.kind === "desk") {
+        target.fillStyle = item.kind === "desk" ? "#30251a" : "#493523"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.strokeStyle = "#6f5738"; target.lineWidth = 3; target.strokeRect(item.x + 5, item.y + 5, item.w - 10, item.h - 10);
+        const divisions = item.w > item.h ? 3 : 2;
+        for (let part = 1; part < divisions; part++) {
+          const x = item.x + part * item.w / divisions;
+          target.fillStyle = "#241a13"; target.fillRect(x - 1, item.y + 7, 2, item.h - 14);
+        }
+        target.fillStyle = "#a58a55";
+        for (let part = 0; part < divisions; part++) target.fillRect(item.x + (part + .5) * item.w / divisions - 2, item.y + item.h / 2, 4, 4);
+      } else if (item.kind === "clock") {
+        target.fillStyle = "#352619"; target.fillRect(item.x, item.y, item.w, item.h);
+        target.strokeStyle = "#715438"; target.lineWidth = 4; target.strokeRect(item.x + 4, item.y + 4, item.w - 8, item.h - 8);
+        target.fillStyle = "#aaa078"; target.beginPath(); target.arc(item.x + item.w / 2, item.y + 28, 16, 0, Math.PI * 2); target.fill();
+        target.fillStyle = "#28231d"; target.fillRect(item.x + item.w / 2 - 1, item.y + 16, 2, 13); target.fillRect(item.x + item.w / 2, item.y + 27, 9, 2);
+        target.fillStyle = "#8f7448"; target.fillRect(item.x + item.w / 2 - 3, item.y + 54, 6, 49);
       } else {
         target.fillStyle = item.kind === "counter" ? "#3f4036" : item.kind === "piano" ? "#201c18" : "#483824";
         target.fillRect(item.x, item.y, item.w, item.h);
@@ -808,10 +928,9 @@ export default function Home() {
     mansion.fillRect(0, 0, MAP_W, MAP_H);
 
     ROOMS.forEach((room, roomIndex) => {
-      const tiled = [2, 4, 6, 10].includes(roomIndex);
-      mansion.fillStyle = tiled ? "#292a24" : roomIndex % 3 === 0 ? "#332c22" : "#302b22";
+      mansion.fillStyle = room.floor === "tile" ? "#292a24" : room.floor === "stone" ? "#252621" : "#302b22";
       mansion.fillRect(room.x, room.y, room.w, room.h);
-      if (tiled) {
+      if (room.floor === "tile") {
         const tile = 34;
         for (let y = room.y; y < room.y + room.h; y += tile) {
           for (let x = room.x; x < room.x + room.w; x += tile) {
@@ -819,6 +938,32 @@ export default function Home() {
             mansion.fillStyle = tone ? "#37382f" : "#252821";
             mansion.fillRect(x + 1, y + 1, tile - 2, tile - 2);
             mansion.fillStyle = "rgba(0,0,0,.2)"; mansion.fillRect(x + tile - 3, y + 2, 2, tile - 3);
+          }
+        }
+      } else if (room.floor === "stone") {
+        const blockW = 72;
+        const blockH = 48;
+        for (let y = room.y; y < room.y + room.h; y += blockH) {
+          const offset = (Math.floor(y / blockH) % 2) * (blockW / 2);
+          for (let x = room.x - offset; x < room.x + room.w; x += blockW) {
+            const seed = Math.abs((x * 11 + y * 7 + roomIndex * 19) % 4);
+            mansion.fillStyle = ["#30312a", "#34342c", "#292c27", "#38372e"][seed];
+            mansion.fillRect(x + 2, y + 2, blockW - 4, blockH - 4);
+            mansion.fillStyle = "rgba(123,118,92,.1)"; mansion.fillRect(x + 8, y + 7, blockW - 22, 3);
+          }
+        }
+      } else if (room.floor === "parquet") {
+        const parquet = 38;
+        for (let y = room.y; y < room.y + room.h; y += parquet) {
+          for (let x = room.x; x < room.x + room.w; x += parquet) {
+            const alternate = (Math.floor(x / parquet) + Math.floor(y / parquet)) % 2 === 0;
+            mansion.fillStyle = alternate ? "#3d3124" : "#46372a";
+            mansion.fillRect(x + 1, y + 1, parquet - 2, parquet - 2);
+            mansion.strokeStyle = "rgba(148,116,77,.22)"; mansion.lineWidth = 2;
+            mansion.beginPath();
+            if (alternate) { mansion.moveTo(x + 5, y + parquet - 5); mansion.lineTo(x + parquet - 5, y + 5); }
+            else { mansion.moveTo(x + 5, y + 5); mansion.lineTo(x + parquet - 5, y + parquet - 5); }
+            mansion.stroke();
           }
         }
       } else {
@@ -865,7 +1010,26 @@ export default function Home() {
         mansion.fillStyle = "rgba(55,48,37,.4)"; mansion.fillRect(-5, -2, 10, 1); mansion.fillRect(-4, 2, 7, 1);
         mansion.restore();
       }
+
+      mansion.strokeStyle = "rgba(130,111,77,.32)";
+      mansion.lineWidth = 5;
+      mansion.strokeRect(room.x + 7, room.y + 7, room.w - 14, room.h - 14);
+      mansion.strokeStyle = "rgba(18,16,13,.58)";
+      mansion.lineWidth = 2;
+      mansion.strokeRect(room.x + 14, room.y + 14, room.w - 28, room.h - 28);
     });
+
+    for (const chair of CHAIRS) {
+      mansion.save();
+      mansion.translate(chair.x + chair.w / 2, chair.y + chair.h / 2);
+      mansion.rotate(chair.angle);
+      mansion.fillStyle = "rgba(0,0,0,.5)"; mansion.fillRect(-chair.w / 2 + 5, -chair.h / 2 + 7, chair.w, chair.h);
+      mansion.fillStyle = "#453421"; mansion.fillRect(-chair.w / 2, -chair.h / 2, chair.w, chair.h);
+      mansion.fillStyle = "#633f34"; mansion.fillRect(-chair.w / 2 + 6, -chair.h / 2 + 7, chair.w - 12, chair.h - 15);
+      mansion.strokeStyle = "#775b3b"; mansion.lineWidth = 3; mansion.strokeRect(-chair.w / 2 + 3, -chair.h / 2 + 3, chair.w - 6, chair.h - 6);
+      mansion.fillStyle = "#2e2118"; mansion.fillRect(-chair.w / 2, -chair.h / 2, chair.w, 6);
+      mansion.restore();
+    }
 
     for (const wall of WALLS) {
       mansion.fillStyle = "rgba(0,0,0,.72)"; mansion.fillRect(wall.x + 10, wall.y + 12, wall.w, wall.h);
@@ -882,6 +1046,68 @@ export default function Home() {
       mansion.fillStyle = "rgba(11,12,10,.48)";
       if (wall.w > wall.h) mansion.fillRect(wall.x, wall.y + wall.h - 7, wall.w, 7);
       else mansion.fillRect(wall.x + wall.w - 7, wall.y, 7, wall.h);
+    }
+
+    for (const windowFrame of WINDOWS) {
+      const centerX = windowFrame.axis === "horizontal" ? windowFrame.x + windowFrame.length / 2 : windowFrame.x;
+      const centerY = windowFrame.axis === "vertical" ? windowFrame.y + windowFrame.length / 2 : windowFrame.y;
+      const windowGlow = mansion.createRadialGradient(centerX, centerY, 8, centerX, centerY, 125);
+      windowGlow.addColorStop(0, "rgba(104,127,116,.2)"); windowGlow.addColorStop(1, "rgba(104,127,116,0)");
+      mansion.fillStyle = windowGlow; mansion.beginPath(); mansion.arc(centerX, centerY, 125, 0, Math.PI * 2); mansion.fill();
+      if (windowFrame.axis === "horizontal") {
+        mansion.fillStyle = "#151b1a"; mansion.fillRect(windowFrame.x, windowFrame.y - 10, windowFrame.length, 20);
+        mansion.fillStyle = "#52635d"; mansion.fillRect(windowFrame.x + 7, windowFrame.y - 5, windowFrame.length - 14, 10);
+        mansion.fillStyle = "#1d2522"; mansion.fillRect(windowFrame.x + windowFrame.length / 2 - 3, windowFrame.y - 7, 6, 14);
+        mansion.strokeStyle = "#867a61"; mansion.lineWidth = 4; mansion.strokeRect(windowFrame.x - 3, windowFrame.y - 12, windowFrame.length + 6, 24);
+      } else {
+        mansion.fillStyle = "#151b1a"; mansion.fillRect(windowFrame.x - 10, windowFrame.y, 20, windowFrame.length);
+        mansion.fillStyle = "#52635d"; mansion.fillRect(windowFrame.x - 5, windowFrame.y + 7, 10, windowFrame.length - 14);
+        mansion.fillStyle = "#1d2522"; mansion.fillRect(windowFrame.x - 7, windowFrame.y + windowFrame.length / 2 - 3, 14, 6);
+        mansion.strokeStyle = "#867a61"; mansion.lineWidth = 4; mansion.strokeRect(windowFrame.x - 12, windowFrame.y - 3, 24, windowFrame.length + 6);
+      }
+    }
+
+    for (const doorway of DOORWAYS) {
+      mansion.save();
+      mansion.fillStyle = "#7a6646";
+      mansion.strokeStyle = "#aa9165";
+      mansion.lineWidth = 3;
+      if (doorway.axis === "vertical") {
+        mansion.fillRect(doorway.x - 16, doorway.y, 32, doorway.length);
+        mansion.fillStyle = "#31251a"; mansion.fillRect(doorway.x - 11, doorway.y + 7, 22, doorway.length - 14);
+        mansion.fillStyle = "#8b744e"; mansion.fillRect(doorway.x - 19, doorway.y, 38, 10); mansion.fillRect(doorway.x - 19, doorway.y + doorway.length - 10, 38, 10);
+        const hingeY = doorway.swing > 0 ? doorway.y + 11 : doorway.y + doorway.length - 11;
+        mansion.translate(doorway.x, hingeY); mansion.rotate(doorway.swing * .78);
+        mansion.fillStyle = "#4d3522"; mansion.fillRect(-5, doorway.swing > 0 ? 0 : -74, 10, 74);
+        mansion.strokeRect(-5, doorway.swing > 0 ? 0 : -74, 10, 74);
+        mansion.fillStyle = "#b59a61"; mansion.fillRect(1, doorway.swing > 0 ? 57 : -61, 4, 4);
+      } else {
+        mansion.fillRect(doorway.x, doorway.y - 16, doorway.length, 32);
+        mansion.fillStyle = "#31251a"; mansion.fillRect(doorway.x + 7, doorway.y - 11, doorway.length - 14, 22);
+        mansion.fillStyle = "#8b744e"; mansion.fillRect(doorway.x, doorway.y - 19, 10, 38); mansion.fillRect(doorway.x + doorway.length - 10, doorway.y - 19, 10, 38);
+        const hingeX = doorway.swing > 0 ? doorway.x + 11 : doorway.x + doorway.length - 11;
+        mansion.translate(hingeX, doorway.y); mansion.rotate(doorway.swing * .78);
+        mansion.fillStyle = "#4d3522"; mansion.fillRect(doorway.swing > 0 ? 0 : -74, -5, 74, 10);
+        mansion.strokeRect(doorway.swing > 0 ? 0 : -74, -5, 74, 10);
+        mansion.fillStyle = "#b59a61"; mansion.fillRect(doorway.swing > 0 ? 57 : -61, 1, 4, 4);
+      }
+      mansion.restore();
+    }
+
+    for (const portrait of PORTRAITS) {
+      mansion.fillStyle = "rgba(0,0,0,.62)"; mansion.fillRect(portrait.x + 5, portrait.y + 7, portrait.w, portrait.h);
+      mansion.fillStyle = "#765c37"; mansion.fillRect(portrait.x, portrait.y, portrait.w, portrait.h);
+      mansion.fillStyle = "#201b16"; mansion.fillRect(portrait.x + 6, portrait.y + 6, portrait.w - 12, portrait.h - 12);
+      mansion.fillStyle = "#71614b"; mansion.beginPath(); mansion.ellipse(portrait.x + portrait.w / 2, portrait.y + portrait.h / 2, 7, 10, 0, 0, Math.PI * 2); mansion.fill();
+      mansion.fillStyle = "#171410"; mansion.fillRect(portrait.x + portrait.w / 2 - 7, portrait.y + portrait.h / 2 + 7, 14, 7);
+    }
+
+    for (const light of HOUSE_LIGHTS) {
+      const lampGlow = mansion.createRadialGradient(light.x, light.y, 2, light.x, light.y, 54);
+      lampGlow.addColorStop(0, "rgba(190,145,72,.22)"); lampGlow.addColorStop(1, "rgba(190,145,72,0)");
+      mansion.fillStyle = lampGlow; mansion.beginPath(); mansion.arc(light.x, light.y, 54, 0, Math.PI * 2); mansion.fill();
+      mansion.fillStyle = "#9c7d49"; mansion.fillRect(light.x - 3, light.y - 7, 6, 14);
+      mansion.fillStyle = "#d1ad66"; mansion.fillRect(light.x - 7, light.y - 3, 14, 6);
     }
     FURNITURE.forEach((item) => drawFurniture(mansion, item));
 
@@ -949,13 +1175,23 @@ export default function Home() {
 
       const playerScreen = { x: game.player.x - game.camera.x, y: game.player.y - game.camera.y };
       ctx.save();
-      ctx.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.965)" : "rgba(0,0,0,.68)";
+      ctx.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.965)" : "rgba(0,0,0,.62)";
       ctx.fillRect(0, 0, width, height);
       ctx.globalCompositeOperation = "destination-out";
       const glowRadius = game.hiddenSpot ? 48 : 220;
       const glow = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 16, playerScreen.x, playerScreen.y, glowRadius);
       glow.addColorStop(0, "rgba(0,0,0,.99)"); glow.addColorStop(.55, "rgba(0,0,0,.92)"); glow.addColorStop(.82, "rgba(0,0,0,.48)"); glow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
+      if (!game.hiddenSpot) {
+        for (const light of HOUSE_LIGHTS) {
+          const lightX = light.x - game.camera.x;
+          const lightY = light.y - game.camera.y;
+          if (lightX < -95 || lightY < -95 || lightX > width + 95 || lightY > height + 95) continue;
+          const lampCutout = ctx.createRadialGradient(lightX, lightY, 2, lightX, lightY, 92);
+          lampCutout.addColorStop(0, "rgba(0,0,0,.34)"); lampCutout.addColorStop(.45, "rgba(0,0,0,.18)"); lampCutout.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = lampCutout; ctx.beginPath(); ctx.arc(lightX, lightY, 92, 0, Math.PI * 2); ctx.fill();
+        }
+      }
       if (game.flashlightOn && game.battery > 0 && !game.hiddenSpot) {
         ctx.save(); ctx.translate(playerScreen.x, playerScreen.y); ctx.rotate(game.aim);
         ctx.beginPath(); ctx.moveTo(9, -14); ctx.lineTo(655, -215); ctx.lineTo(655, 215); ctx.closePath(); ctx.clip();
@@ -971,6 +1207,14 @@ export default function Home() {
         const nearbyLight = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 12, playerScreen.x, playerScreen.y, glowRadius);
         nearbyLight.addColorStop(0, "rgba(226,206,143,.18)"); nearbyLight.addColorStop(.6, "rgba(186,170,116,.09)"); nearbyLight.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = nearbyLight; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
+        for (const light of HOUSE_LIGHTS) {
+          const lightX = light.x - game.camera.x;
+          const lightY = light.y - game.camera.y;
+          if (lightX < -95 || lightY < -95 || lightX > width + 95 || lightY > height + 95) continue;
+          const lampWarmth = ctx.createRadialGradient(lightX, lightY, 1, lightX, lightY, 82);
+          lampWarmth.addColorStop(0, "rgba(205,153,74,.12)"); lampWarmth.addColorStop(1, "rgba(205,153,74,0)");
+          ctx.fillStyle = lampWarmth; ctx.beginPath(); ctx.arc(lightX, lightY, 82, 0, Math.PI * 2); ctx.fill();
+        }
         if (game.flashlightOn && game.battery > 0) {
           ctx.translate(playerScreen.x, playerScreen.y); ctx.rotate(game.aim);
           ctx.beginPath(); ctx.moveTo(9, -14); ctx.lineTo(655, -215); ctx.lineTo(655, 215); ctx.closePath(); ctx.clip();
