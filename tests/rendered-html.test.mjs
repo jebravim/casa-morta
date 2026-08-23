@@ -85,16 +85,20 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   };
   const hidingSpots = Function(`return ${extractArray(/const HIDING_SPOTS: HidingSpot\[\] = (\[[\s\S]*?\n\]);/)}`)();
   const furniture = Function("HIDING_SPOTS", `return ${extractArray(/const FURNITURE: Furniture\[\] = (\[[\s\S]*?\n\]);/)}`)(hidingSpots);
+  const chairs = Function(`return ${extractArray(/const CHAIRS: Chair\[\] = (\[[\s\S]*?\n\]);/)}`)();
   const doorways = Function(`return ${extractArray(/const DOORWAYS: Doorway\[\] = (\[[\s\S]*?\n\]);/)}`)();
 
   for (const doorway of doorways) {
     const clearance = doorway.axis === "vertical"
       ? { x: doorway.x - 100, y: doorway.y, w: 200, h: doorway.length }
       : { x: doorway.x, y: doorway.y - 100, w: doorway.length, h: 200 };
-    for (const item of furniture) {
+    for (const item of [...furniture, ...chairs]) {
       const overlapX = Math.min(item.x + item.w, clearance.x + clearance.w) - Math.max(item.x, clearance.x);
       const overlapY = Math.min(item.y + item.h, clearance.y + clearance.h) - Math.max(item.y, clearance.y);
       assert.ok(overlapX <= 0 || overlapY <= 0, `Móvel ${item.kind} próximo demais da porta em ${doorway.x},${doorway.y}`);
     }
   }
+
+  assert.match(page, /\{ kind: "table", x: 1360, y: 690, w: 150, h: 225 \}/);
+  assert.match(page, /\{ x: 1415, y: 645, w: 40, h: 40, angle: 0 \}/);
 });

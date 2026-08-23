@@ -165,8 +165,8 @@ const FURNITURE: Furniture[] = [
   { kind: "table", x: 1945, y: 170, w: 185, h: 92 }, { kind: "crate", x: 2155, y: 100, w: 72, h: 72 },
   { kind: "counter", x: 260, y: 650, w: 250, h: 62 }, { kind: "counter", x: 410, y: 690, w: 70, h: 230 },
   { kind: "table", x: 220, y: 820, w: 170, h: 98 }, { kind: "sofa", x: 730, y: 715, w: 210, h: 76 },
-  { kind: "table", x: 820, y: 860, w: 150, h: 70 }, { kind: "table", x: 1390, y: 705, w: 270, h: 100 },
-  { kind: "shelf", x: 1280, y: 930, w: 190, h: 54 }, { kind: "shelf", x: 1940, y: 590, w: 54, h: 250 },
+  { kind: "table", x: 820, y: 860, w: 150, h: 70 }, { kind: "table", x: 1360, y: 690, w: 150, h: 225 },
+  { kind: "shelf", x: 1280, y: 950, w: 140, h: 54 }, { kind: "shelf", x: 1940, y: 590, w: 54, h: 250 },
   { kind: "sofa", x: 2190, y: 900, w: 120, h: 70 }, { kind: "crate", x: 80, y: 1150, w: 105, h: 105 },
   { kind: "crate", x: 220, y: 1260, w: 92, h: 92 }, { kind: "shelf", x: 730, y: 1185, w: 220, h: 54 },
   { kind: "table", x: 930, y: 1280, w: 150, h: 90 }, { kind: "counter", x: 1340, y: 1190, w: 120, h: 62 },
@@ -177,7 +177,7 @@ const FURNITURE: Furniture[] = [
   { kind: "dresser", x: 1848, y: 70, w: 115, h: 52 }, { kind: "table", x: 2180, y: 390, w: 130, h: 74 },
   { kind: "stove", x: 58, y: 588, w: 86, h: 70 }, { kind: "sink", x: 158, y: 588, w: 86, h: 70 },
   { kind: "stairs", x: 980, y: 585, w: 118, h: 285 }, { kind: "clock", x: 650, y: 850, w: 54, h: 132 },
-  { kind: "dresser", x: 1680, y: 570, w: 88, h: 120 }, { kind: "fireplace", x: 2268, y: 590, w: 68, h: 145 },
+  { kind: "dresser", x: 1640, y: 590, w: 120, h: 72 }, { kind: "fireplace", x: 2268, y: 590, w: 68, h: 145 },
   { kind: "shelf", x: 72, y: 1390, w: 210, h: 52 }, { kind: "counter", x: 430, y: 1185, w: 58, h: 220 },
   { kind: "counter", x: 1000, y: 1185, w: 68, h: 220 }, { kind: "bathtub", x: 1535, y: 1190, w: 110, h: 78 },
   { kind: "sink", x: 1655, y: 1450, w: 95, h: 62 }, { kind: "sofa", x: 1940, y: 1190, w: 220, h: 58 },
@@ -187,7 +187,7 @@ const FURNITURE: Furniture[] = [
 const RUGS: Rect[] = [
   { x: 210, y: 245, w: 245, h: 92 }, { x: 760, y: 185, w: 315, h: 150 },
   { x: 1328, y: 294, w: 300, h: 118 }, { x: 1918, y: 305, w: 250, h: 118 },
-  { x: 690, y: 770, w: 395, h: 165 }, { x: 1334, y: 650, w: 350, h: 200 },
+  { x: 690, y: 770, w: 395, h: 165 }, { x: 1288, y: 638, w: 305, h: 330 },
   { x: 1945, y: 800, w: 285, h: 165 }, { x: 820, y: 1225, w: 285, h: 155 },
   { x: 1915, y: 1345, w: 310, h: 128 },
 ];
@@ -230,10 +230,10 @@ const WINDOWS: WindowFrame[] = [
 const CHAIRS: Chair[] = [
   { x: 815, y: 185, w: 36, h: 36, angle: 0 }, { x: 1010, y: 245, w: 36, h: 36, angle: Math.PI / 2 },
   { x: 200, y: 770, w: 38, h: 38, angle: 0 }, { x: 395, y: 842, w: 38, h: 38, angle: Math.PI / 2 },
-  { x: 1420, y: 654, w: 40, h: 40, angle: 0 }, { x: 1510, y: 654, w: 40, h: 40, angle: 0 },
-  { x: 1600, y: 654, w: 40, h: 40, angle: 0 }, { x: 1420, y: 810, w: 40, h: 40, angle: Math.PI },
-  { x: 1510, y: 810, w: 40, h: 40, angle: Math.PI }, { x: 1600, y: 810, w: 40, h: 40, angle: Math.PI },
-  { x: 1340, y: 735, w: 40, h: 40, angle: -Math.PI / 2 }, { x: 1672, y: 735, w: 40, h: 40, angle: Math.PI / 2 },
+  { x: 1320, y: 700, w: 40, h: 40, angle: -Math.PI / 2 }, { x: 1320, y: 788, w: 40, h: 40, angle: -Math.PI / 2 },
+  { x: 1320, y: 876, w: 40, h: 40, angle: -Math.PI / 2 }, { x: 1510, y: 700, w: 40, h: 40, angle: Math.PI / 2 },
+  { x: 1510, y: 788, w: 40, h: 40, angle: Math.PI / 2 }, { x: 1510, y: 876, w: 40, h: 40, angle: Math.PI / 2 },
+  { x: 1415, y: 645, w: 40, h: 40, angle: 0 }, { x: 1415, y: 920, w: 40, h: 40, angle: Math.PI },
   { x: 1938, y: 715, w: 38, h: 38, angle: 0 }, { x: 2150, y: 780, w: 38, h: 38, angle: Math.PI / 2 },
 ];
 
