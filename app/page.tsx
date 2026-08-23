@@ -90,6 +90,11 @@ type Hud = {
 const MAP_W = 2400;
 const MAP_H = 1600;
 const PLAYER_RADIUS = 14;
+const PLAYER_WALK_SPEED = 130;
+const PLAYER_SPRINT_SPEED = 198;
+const PLAYER_LIGHT_RADIUS = 300;
+const MONSTER_CHASE_SPEED = 142;
+const MONSTER_CHASE_ACCELERATION = .03;
 
 const ROOMS = [
   { name: "QUARTO PRINCIPAL", floor: "wood", x: 40, y: 40, w: 560, h: 480 },
@@ -687,7 +692,7 @@ export default function Home() {
         if (game.keys.has("d") || game.keys.has("arrowright")) x += 1;
         const moving = x !== 0 || y !== 0;
         const sprinting = moving && game.keys.has("shift") && game.stamina > 2;
-        const speed = sprinting ? 198 : 130;
+        const speed = sprinting ? PLAYER_SPRINT_SPEED : PLAYER_WALK_SPEED;
         if (moving) {
           const length = Math.hypot(x, y);
           x /= length; y /= length;
@@ -788,7 +793,9 @@ export default function Home() {
       if (length < 16 && monster.pathIndex < monster.path.length - 1) monster.pathIndex += 1;
       else if (length > 1) {
         monster.angle = Math.atan2(dy, dx);
-        const speed = monster.mode === "caçando" ? 148 + game.elapsed * .18 : monster.mode === "investigando" ? 116 : 88 + game.elapsed * .06;
+        const speed = monster.mode === "caçando"
+          ? MONSTER_CHASE_SPEED + game.elapsed * MONSTER_CHASE_ACCELERATION
+          : monster.mode === "investigando" ? 116 : 88 + game.elapsed * .06;
         moveWithCollision(monster, dx / length * speed * dt, dy / length * speed * dt, 16);
       }
 
@@ -1178,9 +1185,9 @@ export default function Home() {
       ctx.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.965)" : "rgba(0,0,0,.62)";
       ctx.fillRect(0, 0, width, height);
       ctx.globalCompositeOperation = "destination-out";
-      const glowRadius = game.hiddenSpot ? 48 : 220;
+      const glowRadius = game.hiddenSpot ? 48 : PLAYER_LIGHT_RADIUS;
       const glow = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 16, playerScreen.x, playerScreen.y, glowRadius);
-      glow.addColorStop(0, "rgba(0,0,0,.99)"); glow.addColorStop(.55, "rgba(0,0,0,.92)"); glow.addColorStop(.82, "rgba(0,0,0,.48)"); glow.addColorStop(1, "rgba(0,0,0,0)");
+      glow.addColorStop(0, "rgba(0,0,0,1)"); glow.addColorStop(.62, "rgba(0,0,0,.96)"); glow.addColorStop(.86, "rgba(0,0,0,.58)"); glow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
       if (!game.hiddenSpot) {
         for (const light of HOUSE_LIGHTS) {
@@ -1205,7 +1212,7 @@ export default function Home() {
         ctx.save();
         ctx.globalCompositeOperation = "screen";
         const nearbyLight = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 12, playerScreen.x, playerScreen.y, glowRadius);
-        nearbyLight.addColorStop(0, "rgba(226,206,143,.18)"); nearbyLight.addColorStop(.6, "rgba(186,170,116,.09)"); nearbyLight.addColorStop(1, "rgba(0,0,0,0)");
+        nearbyLight.addColorStop(0, "rgba(226,206,143,.26)"); nearbyLight.addColorStop(.62, "rgba(186,170,116,.13)"); nearbyLight.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = nearbyLight; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
         for (const light of HOUSE_LIGHTS) {
           const lightX = light.x - game.camera.x;
