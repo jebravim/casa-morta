@@ -92,7 +92,7 @@ const MAP_H = 1600;
 const PLAYER_RADIUS = 14;
 const PLAYER_WALK_SPEED = 130;
 const PLAYER_SPRINT_SPEED = 198;
-const PLAYER_LIGHT_RADIUS = 300;
+const PLAYER_LIGHT_RADIUS = 270;
 const MONSTER_CHASE_SPEED = 142;
 const MONSTER_CHASE_ACCELERATION = .03;
 
@@ -1192,7 +1192,7 @@ export default function Home() {
       darkness.clearRect(0, 0, darknessLayer.width, darknessLayer.height);
       darkness.setTransform(ratio, 0, 0, ratio, 0, 0);
       darkness.globalCompositeOperation = "source-over";
-      darkness.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.97)" : "rgba(0,0,0,.82)";
+      darkness.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.985)" : "rgba(0,0,0,.96)";
       darkness.fillRect(0, 0, width, height);
       darkness.globalCompositeOperation = "destination-out";
       const glowRadius = game.hiddenSpot ? 48 : PLAYER_LIGHT_RADIUS;
@@ -1205,7 +1205,7 @@ export default function Home() {
           const lightY = light.y - game.camera.y;
           if (lightX < -95 || lightY < -95 || lightX > width + 95 || lightY > height + 95) continue;
           const lampCutout = darkness.createRadialGradient(lightX, lightY, 2, lightX, lightY, 92);
-          lampCutout.addColorStop(0, "rgba(0,0,0,.34)"); lampCutout.addColorStop(.45, "rgba(0,0,0,.18)"); lampCutout.addColorStop(1, "rgba(0,0,0,0)");
+          lampCutout.addColorStop(0, "rgba(0,0,0,.16)"); lampCutout.addColorStop(.45, "rgba(0,0,0,.08)"); lampCutout.addColorStop(1, "rgba(0,0,0,0)");
           darkness.fillStyle = lampCutout; darkness.beginPath(); darkness.arc(lightX, lightY, 92, 0, Math.PI * 2); darkness.fill();
         }
       }
