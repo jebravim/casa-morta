@@ -66,6 +66,17 @@ test("shows and implements the hold-breath control", async () => {
   assert.match(page, /className="breath-button"/);
 });
 
+test("flashlight beam alerts the monster to the player", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /function flashlightHits\(game: Game, target: Point\)/);
+  assert.match(page, /Math\.abs\(angleDelta\(targetAngle, game\.aim\)\) < FLASHLIGHT_HALF_ANGLE/);
+  assert.match(page, /const monsterInBeam = flashlightHits\(game, monster\)/);
+  assert.match(page, /const canSee = canSeePlayer \|\| monsterInBeam/);
+  assert.match(page, /A LUZ ENTREGOU SUA POSIÇÃO/);
+  assert.doesNotMatch(page, /const lightBetrays = game\.flashlightOn/);
+});
+
 test("keeps doorways traversable and applies the latest difficulty tuning", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 

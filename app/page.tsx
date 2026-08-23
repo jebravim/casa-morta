@@ -293,6 +293,15 @@ function lineBlocked(a: Point, b: Point) {
   return false;
 }
 
+function flashlightHits(game: Game, target: Point) {
+  if (!game.flashlightOn || game.battery <= 0 || game.hiddenSpot) return false;
+  const targetDistance = distance(game.player, target);
+  const targetAngle = Math.atan2(target.y - game.player.y, target.x - game.player.x);
+  return targetDistance < FLASHLIGHT_RANGE &&
+    Math.abs(angleDelta(targetAngle, game.aim)) < FLASHLIGHT_HALF_ANGLE &&
+    !lineBlocked(game.player, target);
+}
+
 function currentRoom(point: Point) {
   return ROOMS.find((room) => pointIn(point, room)) ?? { name: "ENTRE AS PAREDES", x: point.x, y: point.y, w: 0, h: 0 };
 }
@@ -891,13 +900,14 @@ export default function Home() {
       const playerDistance = distance(monster, game.player);
       const sightAngle = Math.atan2(game.player.y - monster.y, game.player.x - monster.x);
       const coneSight = Math.abs(angleDelta(sightAngle, monster.angle)) < 1.15;
-      const lightBetrays = game.flashlightOn && playerDistance < FLASHLIGHT_RANGE;
-      const canSee = !game.hiddenSpot && !lineBlocked(monster, game.player) &&
-        ((coneSight && playerDistance < (monster.mode === "caçando" ? 600 : 410)) || lightBetrays);
+      const monsterInBeam = flashlightHits(game, monster);
+      const canSeePlayer = !game.hiddenSpot && !lineBlocked(monster, game.player) &&
+        coneSight && playerDistance < (monster.mode === "caçando" ? 600 : 410);
+      const canSee = canSeePlayer || monsterInBeam;
 
       if (canSee) {
         if (monster.mode !== "caçando") {
-          message(game, "ELA VIU VOCÊ", 1.8);
+          message(game, monsterInBeam ? "A LUZ ENTREGOU SUA POSIÇÃO" : "ELA VIU VOCÊ", 1.8);
           tone(game, 45, .65, .07, "sawtooth");
           monster.repathIn = 0;
         }
@@ -1396,9 +1406,7 @@ export default function Home() {
         ctx.restore();
 
         const monsterScreen = { x: game.monster.x - game.camera.x, y: game.monster.y - game.camera.y };
-        const monsterAngleFromPlayer = Math.atan2(game.monster.y - game.player.y, game.monster.x - game.player.x);
-        const monsterInBeam = game.flashlightOn && game.battery > 0 && distance(game.monster, game.player) < FLASHLIGHT_RANGE &&
-          Math.abs(angleDelta(monsterAngleFromPlayer, game.aim)) < FLASHLIGHT_HALF_ANGLE && !lineBlocked(game.player, game.monster);
+        const monsterInBeam = flashlightHits(game, game.monster);
         if (game.mode === "intro" || monsterInBeam) {
           ctx.save(); ctx.translate(monsterScreen.x, monsterScreen.y); ctx.rotate(game.monster.angle - Math.PI);
           ctx.fillStyle = "rgba(0,0,0,.72)"; ctx.beginPath(); ctx.ellipse(4, 19, 48, 19, 0, 0, Math.PI * 2); ctx.fill();
