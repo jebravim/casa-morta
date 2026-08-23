@@ -93,7 +93,10 @@ const MAP_H = 1600;
 const PLAYER_RADIUS = 14;
 const PLAYER_WALK_SPEED = 130;
 const PLAYER_SPRINT_SPEED = 198;
-const PLAYER_LIGHT_RADIUS = 270;
+const PLAYER_LIGHT_RADIUS = 245;
+const FLASHLIGHT_RANGE = 580;
+const FLASHLIGHT_HALF_WIDTH = 190;
+const FLASHLIGHT_HALF_ANGLE = .34;
 const MONSTER_CHASE_SPEED = 142;
 const MONSTER_CHASE_ACCELERATION = .03;
 
@@ -788,7 +791,7 @@ export default function Home() {
       const playerDistance = distance(monster, game.player);
       const sightAngle = Math.atan2(game.player.y - monster.y, game.player.x - monster.x);
       const coneSight = Math.abs(angleDelta(sightAngle, monster.angle)) < 1.15;
-      const lightBetrays = game.flashlightOn && playerDistance < 650;
+      const lightBetrays = game.flashlightOn && playerDistance < FLASHLIGHT_RANGE;
       const canSee = !game.hiddenSpot && !lineBlocked(monster, game.player) &&
         ((coneSight && playerDistance < (monster.mode === "caçando" ? 600 : 410)) || lightBetrays);
 
@@ -1249,10 +1252,10 @@ export default function Home() {
       }
       if (game.flashlightOn && game.battery > 0 && !game.hiddenSpot) {
         darkness.save(); darkness.translate(playerScreen.x, playerScreen.y); darkness.rotate(game.aim);
-        darkness.beginPath(); darkness.moveTo(9, -14); darkness.lineTo(655, -215); darkness.lineTo(655, 215); darkness.closePath(); darkness.clip();
-        const beam = darkness.createRadialGradient(0, 0, 18, 0, 0, 670);
+        darkness.beginPath(); darkness.moveTo(9, -14); darkness.lineTo(FLASHLIGHT_RANGE, -FLASHLIGHT_HALF_WIDTH); darkness.lineTo(FLASHLIGHT_RANGE, FLASHLIGHT_HALF_WIDTH); darkness.closePath(); darkness.clip();
+        const beam = darkness.createRadialGradient(0, 0, 18, 0, 0, FLASHLIGHT_RANGE);
         beam.addColorStop(0, "rgba(0,0,0,.995)"); beam.addColorStop(.48, "rgba(0,0,0,.96)"); beam.addColorStop(.78, "rgba(0,0,0,.58)"); beam.addColorStop(1, "rgba(0,0,0,0)");
-        darkness.fillStyle = beam; darkness.fillRect(0, -230, 680, 460); darkness.restore();
+        darkness.fillStyle = beam; darkness.fillRect(0, -FLASHLIGHT_HALF_WIDTH - 15, FLASHLIGHT_RANGE + 10, FLASHLIGHT_HALF_WIDTH * 2 + 30); darkness.restore();
       }
       darkness.globalCompositeOperation = "source-over";
       ctx.drawImage(darknessLayer, 0, 0, darknessLayer.width, darknessLayer.height, 0, 0, width, height);
@@ -1270,17 +1273,17 @@ export default function Home() {
         }
         if (game.flashlightOn && game.battery > 0) {
           ctx.translate(playerScreen.x, playerScreen.y); ctx.rotate(game.aim);
-          ctx.beginPath(); ctx.moveTo(9, -14); ctx.lineTo(655, -215); ctx.lineTo(655, 215); ctx.closePath(); ctx.clip();
-          const warmBeam = ctx.createRadialGradient(0, 0, 18, 0, 0, 670);
+          ctx.beginPath(); ctx.moveTo(9, -14); ctx.lineTo(FLASHLIGHT_RANGE, -FLASHLIGHT_HALF_WIDTH); ctx.lineTo(FLASHLIGHT_RANGE, FLASHLIGHT_HALF_WIDTH); ctx.closePath(); ctx.clip();
+          const warmBeam = ctx.createRadialGradient(0, 0, 18, 0, 0, FLASHLIGHT_RANGE);
           warmBeam.addColorStop(0, "rgba(255,232,157,.3)"); warmBeam.addColorStop(.52, "rgba(230,205,134,.18)"); warmBeam.addColorStop(1, "rgba(0,0,0,0)");
-          ctx.fillStyle = warmBeam; ctx.fillRect(0, -230, 680, 460);
+          ctx.fillStyle = warmBeam; ctx.fillRect(0, -FLASHLIGHT_HALF_WIDTH - 15, FLASHLIGHT_RANGE + 10, FLASHLIGHT_HALF_WIDTH * 2 + 30);
         }
         ctx.restore();
 
         const monsterScreen = { x: game.monster.x - game.camera.x, y: game.monster.y - game.camera.y };
         const monsterAngleFromPlayer = Math.atan2(game.monster.y - game.player.y, game.monster.x - game.player.x);
-        const monsterInBeam = game.flashlightOn && game.battery > 0 && distance(game.monster, game.player) < 670 &&
-          Math.abs(angleDelta(monsterAngleFromPlayer, game.aim)) < .38 && !lineBlocked(game.player, game.monster);
+        const monsterInBeam = game.flashlightOn && game.battery > 0 && distance(game.monster, game.player) < FLASHLIGHT_RANGE &&
+          Math.abs(angleDelta(monsterAngleFromPlayer, game.aim)) < FLASHLIGHT_HALF_ANGLE && !lineBlocked(game.player, game.monster);
         if (game.mode === "intro" || monsterInBeam) {
           ctx.save(); ctx.translate(monsterScreen.x, monsterScreen.y); ctx.rotate(game.monster.angle - Math.PI);
           ctx.fillStyle = "rgba(0,0,0,.72)"; ctx.beginPath(); ctx.ellipse(4, 19, 48, 19, 0, 0, Math.PI * 2); ctx.fill();
