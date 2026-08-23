@@ -40,6 +40,7 @@ type Monster = Point & {
   searchUntil: number;
   hearingUntil: number;
   stuckFor: number;
+  recoverUntil: number;
   lastCheckedSpot: string | null;
 };
 
@@ -317,26 +318,35 @@ function nearestSpot(point: Point, maxDistance = 82) {
   return best;
 }
 
-function nearestFreeCell(col: number, row: number, cols: number, rows: number, grid: number) {
-  for (let radius = 0; radius < 6; radius++) {
+function nearestFreeCell(col: number, row: number, cols: number, rows: number, grid: number, origin: Point) {
+  const candidates: { col: number; row: number; point: Point }[] = [];
+  const visited = new Set<string>();
+  for (let radius = 0; radius < 7; radius++) {
     for (let y = -radius; y <= radius; y++) {
       for (let x = -radius; x <= radius; x++) {
+        if (Math.max(Math.abs(x), Math.abs(y)) !== radius) continue;
         const c = clamp(col + x, 0, cols - 1);
         const r = clamp(row + y, 0, rows - 1);
+        const key = `${c},${r}`;
+        if (visited.has(key)) continue;
+        visited.add(key);
         const point = { x: c * grid + grid / 2, y: r * grid + grid / 2 };
-        if (!collides(point, 18)) return { col: c, row: r };
+        if (!collides(point, 18)) candidates.push({ col: c, row: r, point });
       }
     }
   }
-  return { col, row };
+  candidates.sort((a, b) => distance(origin, a.point) - distance(origin, b.point));
+  const reachable = candidates.find((candidate) => !movementBlocked(origin, candidate.point, 16));
+  return reachable ?? candidates[0] ?? { col, row };
 }
 
 function findPath(start: Point, goal: Point) {
+  if (!collides(goal, 16) && !movementBlocked(start, goal, 16)) return [{ ...goal }];
   const grid = 40;
   const cols = Math.ceil(MAP_W / grid);
   const rows = Math.ceil(MAP_H / grid);
-  const startCell = nearestFreeCell(Math.floor(start.x / grid), Math.floor(start.y / grid), cols, rows, grid);
-  const goalCell = nearestFreeCell(Math.floor(goal.x / grid), Math.floor(goal.y / grid), cols, rows, grid);
+  const startCell = nearestFreeCell(Math.floor(start.x / grid), Math.floor(start.y / grid), cols, rows, grid, start);
+  const goalCell = nearestFreeCell(Math.floor(goal.x / grid), Math.floor(goal.y / grid), cols, rows, grid, goal);
   const startKey = `${startCell.col},${startCell.row}`;
   const goalKey = `${goalCell.col},${goalCell.row}`;
   const open = [{ ...startCell, score: 0 }];
@@ -356,9 +366,9 @@ function findPath(start: Point, goal: Point) {
         result.unshift({ x: cell.col * grid + grid / 2, y: cell.row * grid + grid / 2 });
         cursor = came.get(cursor);
       }
-      const safeGoal = collides(goal, 18)
-        ? { x: goalCell.col * grid + grid / 2, y: goalCell.row * grid + grid / 2 }
-        : goal;
+      const goalCellPoint = { x: goalCell.col * grid + grid / 2, y: goalCell.row * grid + grid / 2 };
+      const lastPoint = result[result.length - 1] ?? { x: startCell.col * grid + grid / 2, y: startCell.row * grid + grid / 2 };
+      const safeGoal = !collides(goal, 18) && !movementBlocked(lastPoint, goal, 16) ? goal : goalCellPoint;
       if (!result.length || distance(result[result.length - 1], safeGoal) > 4) result.push(safeGoal);
       return result;
     }
@@ -396,7 +406,7 @@ function makeGame(preview = false): Game {
     monster: {
       ...monsterStart, mode: "espreitando", angle: preview ? Math.PI : 0, target: { ...PATROL_POINTS[1] },
       lastSeen: { ...playerStart }, patrolIndex: 1, path: [], pathIndex: 0, repathIn: 0, searchUntil: 0,
-      hearingUntil: 0, stuckFor: 0, lastCheckedSpot: null,
+      hearingUntil: 0, stuckFor: 0, recoverUntil: 0, lastCheckedSpot: null,
     },
   };
 }
@@ -506,7 +516,7 @@ function recoveryPath(start: Point, goal: Point) {
     const remaining = findPath(candidate, goal);
     if (remaining.length) return [candidate, ...remaining];
   }
-  return findPath(start, goal);
+  return candidates.length ? [candidates[0]] : [];
 }
 
 function moveWithCollision(point: Point, dx: number, dy: number, radius: number) {
@@ -834,6 +844,7 @@ export default function Home() {
           game.monster.target = { ...game.player };
           game.monster.lastSeen = { ...game.player };
           game.monster.hearingUntil = game.elapsed + 3.5;
+          game.monster.recoverUntil = 0;
           game.monster.repathIn = 0;
           message(game, "VOCÊ PERDEU O AR — ELA OUVIU", 3.2);
           tone(game, 68, .8, .08, "sawtooth");
@@ -893,6 +904,7 @@ export default function Home() {
           game.monster.target = { ...game.player };
           game.monster.lastSeen = { ...game.player };
           game.monster.hearingUntil = game.elapsed + 3.5;
+          game.monster.recoverUntil = 0;
           game.monster.repathIn = 0;
         }
         message(game, "SEU CORPO FEZ BARULHO — CORRA", 3.3);
@@ -904,7 +916,7 @@ export default function Home() {
         if (distance(monster.target, game.player) > 28) {
           monster.target = { ...game.player };
           monster.lastSeen = { ...game.player };
-          monster.repathIn = Math.min(monster.repathIn, .18);
+          if (game.elapsed >= monster.recoverUntil) monster.repathIn = Math.min(monster.repathIn, .18);
         }
       }
       const playerDistance = distance(monster, game.player);
@@ -919,6 +931,7 @@ export default function Home() {
         if (monster.mode !== "caçando") {
           message(game, monsterInBeam ? "A LUZ ENTREGOU SUA POSIÇÃO" : "ELA VIU VOCÊ", 1.8);
           tone(game, 45, .65, .07, "sawtooth");
+          monster.recoverUntil = 0;
           monster.repathIn = 0;
         }
         monster.mode = "caçando";
@@ -949,12 +962,23 @@ export default function Home() {
       }
 
       monster.repathIn -= dt;
-      if (monster.repathIn <= 0) {
-        monster.path = findPath(monster, monster.target);
+      if (monster.repathIn <= 0 && game.elapsed >= monster.recoverUntil) {
+        const plannedPath = findPath(monster, monster.target);
+        monster.path = plannedPath.length ? plannedPath : recoveryPath(monster, monster.target);
         monster.pathIndex = 0;
         monster.repathIn = monster.mode === "caçando" ? .45 : 1.05;
       }
-      const waypoint = monster.path[monster.pathIndex] ?? monster.target;
+      let waypoint = monster.path[monster.pathIndex] ?? monster.target;
+      if (movementBlocked(monster, waypoint, 16)) {
+        const detour = recoveryPath(monster, monster.target);
+        if (detour.length) {
+          monster.path = detour;
+          monster.pathIndex = 0;
+          monster.recoverUntil = game.elapsed + 1.35;
+          monster.repathIn = 1.35;
+          waypoint = detour[0];
+        }
+      }
       const dx = waypoint.x - monster.x;
       const dy = waypoint.y - monster.y;
       const length = Math.hypot(dx, dy);
@@ -969,13 +993,15 @@ export default function Home() {
           : monster.mode === "investigando"
             ? MONSTER_INVESTIGATE_SPEED
             : MONSTER_PATROL_SPEED + game.elapsed * MONSTER_PATROL_ACCELERATION;
-        const beforeMove = { x: monster.x, y: monster.y };
         moveWithCollision(monster, dx / length * speed * dt, dy / length * speed * dt, 16);
-        monster.stuckFor = distance(beforeMove, monster) < .05 ? monster.stuckFor + dt : 0;
-        if (monster.stuckFor > .65) {
+        const progress = length - distance(monster, waypoint);
+        const minimumProgress = Math.max(.04, speed * dt * .08);
+        monster.stuckFor = progress < minimumProgress ? monster.stuckFor + dt : Math.max(0, monster.stuckFor - dt * 2);
+        if (monster.stuckFor > .5) {
           monster.path = recoveryPath(monster, monster.target);
           monster.pathIndex = 0;
-          monster.repathIn = monster.mode === "caçando" ? .4 : .7;
+          monster.recoverUntil = game.elapsed + 1.35;
+          monster.repathIn = 1.35;
           monster.stuckFor = 0;
         }
       }

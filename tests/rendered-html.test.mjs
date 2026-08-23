@@ -92,6 +92,18 @@ test("uses an analog digital joystick on mobile", async () => {
   assert.match(styles, /\.joystick-knob/);
 });
 
+test("keeps the monster from getting trapped against walls", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /nearestFreeCell\([^\n]+origin: Point\)/);
+  assert.match(page, /candidates\.find\(\(candidate\) => !movementBlocked\(origin, candidate\.point, 16\)\)/);
+  assert.match(page, /if \(!collides\(goal, 16\) && !movementBlocked\(start, goal, 16\)\) return \[\{ \.\.\.goal \}\]/);
+  assert.match(page, /monster\.path = plannedPath\.length \? plannedPath : recoveryPath\(monster, monster\.target\)/);
+  assert.match(page, /if \(movementBlocked\(monster, waypoint, 16\)\)/);
+  assert.match(page, /monster\.recoverUntil = game\.elapsed \+ 1\.35/);
+  assert.match(page, /const progress = length - distance\(monster, waypoint\)/);
+});
+
 test("keeps doorways traversable and applies the latest difficulty tuning", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
