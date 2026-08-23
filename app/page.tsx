@@ -285,6 +285,34 @@ function collides(point: Point, radius = PLAYER_RADIUS) {
   return FURNITURE.some((rect) => pointIn(point, rect, radius));
 }
 
+function safeSpawnPoint(preferred: Point, radius: number) {
+  const clearance = radius + 6;
+  const bounded = {
+    x: clamp(preferred.x, clearance + 40, MAP_W - clearance - 40),
+    y: clamp(preferred.y, clearance + 40, MAP_H - clearance - 40),
+  };
+  if (!collides(bounded, clearance)) return bounded;
+
+  for (let searchRadius = 28; searchRadius <= 336; searchRadius += 28) {
+    for (let index = 0; index < 24; index++) {
+      const angle = index / 24 * Math.PI * 2;
+      const candidate = {
+        x: clamp(bounded.x + Math.cos(angle) * searchRadius, clearance + 40, MAP_W - clearance - 40),
+        y: clamp(bounded.y + Math.sin(angle) * searchRadius, clearance + 40, MAP_H - clearance - 40),
+      };
+      if (!collides(candidate, clearance)) return candidate;
+    }
+  }
+
+  for (let y = 80; y < MAP_H - 80; y += 40) {
+    for (let x = 80; x < MAP_W - 80; x += 40) {
+      const candidate = { x, y };
+      if (!collides(candidate, clearance)) return candidate;
+    }
+  }
+  return bounded;
+}
+
 function lineBlocked(a: Point, b: Point) {
   const steps = Math.ceil(distance(a, b) / 18);
   for (let i = 1; i < steps; i++) {
@@ -394,8 +422,8 @@ function findPath(start: Point, goal: Point) {
 function makeGame(preview = false): Game {
   const roomHeat = Object.fromEntries(ROOMS.map((room) => [room.name, 0]));
   const hideUses = Object.fromEntries(HIDING_SPOTS.map((spot) => [spot.id, 0]));
-  const playerStart = preview ? { x: 1350, y: 860 } : { x: 925, y: 1450 };
-  const monsterStart = preview ? { x: 1520, y: 860 } : { x: 210, y: 280 };
+  const playerStart = safeSpawnPoint(preview ? { x: 1300, y: 860 } : { x: 925, y: 1450 }, PLAYER_RADIUS);
+  const monsterStart = safeSpawnPoint(preview ? { x: 1600, y: 860 } : { x: 310, y: 350 }, 16);
   return {
     mode: "intro", elapsed: 0, player: playerStart, aim: preview ? 0 : -Math.PI / 2,
     camera: { x: 0, y: 0 }, joystick: { x: 0, y: 0 }, keys: new Set(), flashlightOn: true, battery: INITIAL_FLASHLIGHT_BATTERY, stamina: 100,

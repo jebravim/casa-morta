@@ -95,6 +95,10 @@ test("uses an analog digital joystick on mobile", async () => {
 test("keeps the monster from getting trapped against walls", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
+  assert.match(page, /function safeSpawnPoint\(preferred: Point, radius: number\)/);
+  assert.match(page, /if \(!collides\(bounded, clearance\)\) return bounded/);
+  assert.match(page, /const monsterStart = safeSpawnPoint\(preview \? \{ x: 1600, y: 860 \} : \{ x: 310, y: 350 \}, 16\)/);
+  assert.doesNotMatch(page, /monsterStart = preview \? \{ x: 1520, y: 860 \} : \{ x: 210, y: 280 \}/);
   assert.match(page, /nearestFreeCell\([^\n]+origin: Point\)/);
   assert.match(page, /candidates\.find\(\(candidate\) => !movementBlocked\(origin, candidate\.point, 16\)\)/);
   assert.match(page, /if \(!collides\(goal, 16\) && !movementBlocked\(start, goal, 16\)\) return \[\{ \.\.\.goal \}\]/);
