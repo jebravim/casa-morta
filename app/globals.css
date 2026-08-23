@@ -49,6 +49,9 @@ button { font: inherit; }
 .account-trigger { padding: 8px 11px; border: 1px solid #444837; color: #a5a990; background: #151814; font-size: 8px; letter-spacing: .11em; cursor: pointer; text-transform: uppercase; }
 .account-trigger:hover:not(:disabled) { color: #e0dec2; border-color: #747b59; }
 .account-trigger:disabled { cursor: default; opacity: .48; }
+.pause-trigger { padding: 8px 10px; border: 1px solid #665c45; color: #c5c4a6; background: #171713; font-size: 8px; letter-spacing: .11em; cursor: pointer; }
+.pause-trigger:hover { color: #fffbd8; border-color: #94845e; background: #222118; }
+.pause-trigger kbd { margin: 0 0 0 6px; padding: 2px 4px; font-size: 7px; }
 .account-dot { display: inline-block; width: 6px; height: 6px; margin-right: 7px; border-radius: 50%; background: #5b5f51; }
 .account-dot.online { background: var(--acid); box-shadow: 0 0 8px #b9d35999; }
 
@@ -133,6 +136,19 @@ kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9
 .save-status { margin: 15px auto 4px !important; color: #8d9279 !important; font-size: 8px !important; letter-spacing: .1em; }
 .save-saved { color: var(--acid) !important; }
 .save-error { color: #d55b50 !important; }
+
+.pause-overlay { position: absolute; z-index: 18; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(2,3,2,.82); }
+.pause-card { width: min(470px, 92vw); padding: 34px 38px; border: 1px solid #4b4939; border-top: 3px solid #8d352e; text-align: center; background: linear-gradient(145deg, #12140f 0%, #090b09 100%); box-shadow: 18px 24px 70px #000; }
+.pause-card h2 { margin: 0; color: #dad3b7; font-family: Georgia, serif; font-size: clamp(34px, 5vw, 52px); line-height: .9; letter-spacing: -.045em; text-shadow: 3px 3px 0 #1a100e; }
+.pause-card > p:not(.eyebrow) { margin: 18px auto 20px; color: #858977; font-size: 10px; line-height: 1.6; }
+.pause-actions { display: grid; gap: 10px; }
+.pause-actions button { width: 100%; padding: 13px 16px; border: 1px solid #7b372f; color: #e2dfc3; background: #6f2924; font-weight: 800; font-size: 10px; letter-spacing: .12em; cursor: pointer; box-shadow: 4px 4px 0 #2c100e; }
+.pause-actions button:hover { background: #92362f; transform: translate(-1px, -1px); }
+.pause-actions button span { margin-left: 24px; }
+.pause-actions .exit-game { border-color: #45483a; color: #989b85; background: #121510; box-shadow: 4px 4px 0 #050605; }
+.pause-actions .exit-game:hover { border-color: #783b35; color: #d7c8b5; background: #251513; }
+.pause-card > small { display: block; margin-top: 19px; color: #646857; font-size: 7px; letter-spacing: .13em; }
+.pause-card > small kbd { margin: 0 3px; }
 
 .account-overlay { position: absolute; z-index: 20; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(3,5,4,.84); backdrop-filter: blur(5px); }
 .account-card { position: relative; width: min(610px, 94vw); max-height: min(720px, calc(100vh - 120px)); overflow: auto; padding: 30px; border: 1px solid #4a4f3d; border-top: 3px solid var(--blood); color: #d7d5bb; background: linear-gradient(145deg, #111510 0%, #0b0e0c 100%); box-shadow: 18px 22px 70px #000; }
@@ -224,6 +240,9 @@ kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9
   .brand small, .status { display: none; }
   .timer { min-width: 106px; padding: 6px 10px; font-size: 15px; }
   .top-actions { gap: 0; }
+  .mode-running .account-trigger, .mode-paused .account-trigger { display: none; }
+  .pause-trigger { padding: 7px 8px; }
+  .pause-trigger kbd { display: none; }
   .account-trigger { max-width: 88px; overflow: hidden; padding: 7px 8px; white-space: nowrap; text-overflow: ellipsis; }
   .game-stage { margin: 0; }
   .intro-card { left: 5%; width: 90%; padding: 24px; }
@@ -239,6 +258,7 @@ kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9
   .game-message { top: 16%; width: 84%; font-size: 9px; }
   .account-overlay { padding: 8px; }
   .account-card { max-height: calc(100vh - 76px); padding: 24px 18px; }
+  .pause-card { padding: 28px 22px; }
   .account-summary { grid-template-columns: 1fr 1fr; }
   .account-summary span:last-child { grid-column: 1 / -1; }
   .history-row dl { grid-template-columns: repeat(2, 1fr); }

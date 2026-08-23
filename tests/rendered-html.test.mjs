@@ -43,3 +43,14 @@ test("connects authenticated players to protected session history", async () => 
   assert.match(neonClient, /apirest/);
   assert.doesNotMatch(neonClient, /postgres(?:ql)?:\/\//i);
 });
+
+test("offers pause, resume, and exit controls during a match", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /type Mode = "intro" \| "running" \| "paused"/);
+  assert.match(page, /key === "escape"/);
+  assert.match(page, /JOGO PAUSADO/);
+  assert.match(page, /CONTINUAR/);
+  assert.match(page, /SAIR DA PARTIDA/);
+  assert.match(page, /gameRef\.current = makeGame\(true\)/);
+});

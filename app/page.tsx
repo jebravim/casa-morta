@@ -6,7 +6,7 @@ import { neon, type GameSessionRecord, type PlayerAccount } from "../lib/neon";
 
 type Point = { x: number; y: number };
 type Rect = Point & { w: number; h: number };
-type Mode = "intro" | "running" | "won" | "lost";
+type Mode = "intro" | "running" | "paused" | "won" | "lost";
 type MonsterMode = "espreitando" | "investigando" | "caçando" | "procurando";
 type AccountView = "signin" | "signup" | "history";
 
@@ -662,6 +662,7 @@ export default function Home() {
   }, []);
 
   const startGame = useCallback(() => {
+    gameRef.current?.audio?.close().catch(() => undefined);
     const fresh = makeGame();
     fresh.mode = "running";
     fresh.lastFrame = performance.now();
@@ -673,6 +674,36 @@ export default function Home() {
     setHud(initialHud);
     setSaveState("idle");
     setMode("running");
+  }, []);
+
+  const togglePause = useCallback(() => {
+    const game = gameRef.current;
+    if (!game || (game.mode !== "running" && game.mode !== "paused")) return;
+    if (game.mode === "running") {
+      game.mode = "paused";
+      game.keys.clear();
+      void game.audio?.suspend().catch(() => undefined);
+      setMode("paused");
+      return;
+    }
+    game.mode = "running";
+    game.lastFrame = performance.now();
+    void game.audio?.resume().catch(() => undefined);
+    setMode("running");
+  }, []);
+
+  const exitGame = useCallback(() => {
+    const game = gameRef.current;
+    if (!game) return;
+    game.keys.clear();
+    game.flashlightOn = false;
+    const audio = game.audio;
+    game.audio = null;
+    void audio?.close().catch(() => undefined);
+    gameRef.current = makeGame(true);
+    setHud(initialHud);
+    setSaveState("idle");
+    setMode("intro");
   }, []);
 
   useEffect(() => {
@@ -709,6 +740,12 @@ export default function Home() {
       const game = gameRef.current;
       if (!game) return;
       const key = event.key.toLowerCase();
+      if (!event.repeat && key === "escape") {
+        event.preventDefault();
+        togglePause();
+        return;
+      }
+      if (game.mode !== "running") return;
       if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"].includes(key)) {
         event.preventDefault();
         game.keys.add(key);
@@ -1396,7 +1433,7 @@ export default function Home() {
       canvas.removeEventListener("pointermove", pointerMove);
       gameRef.current?.audio?.close().catch(() => undefined);
     };
-  }, [interact, toggleFlashlight]);
+  }, [interact, toggleFlashlight, togglePause]);
 
   const holdKey = (key: string, active: boolean) => {
     const game = gameRef.current;
@@ -1415,7 +1452,8 @@ export default function Home() {
         <div className="timer"><small>SOBREVIVA</small>{formatTime(hud.remaining)}</div>
         <div className="top-actions">
           <div className={`status status-${hud.monster}`}><span className="status-dot" />{statusLabel}</div>
-          <button className="account-trigger" type="button" onClick={openAccount} disabled={authChecking || mode === "running"}>
+          {mode === "running" && <button className="pause-trigger" type="button" onClick={togglePause}>PAUSAR <kbd>ESC</kbd></button>}
+          <button className="account-trigger" type="button" onClick={openAccount} disabled={authChecking || mode === "running" || mode === "paused"}>
             <span className={user ? "account-dot online" : "account-dot"} />
             {authChecking ? "CONECTANDO" : user ? (user.name || user.email.split("@")[0]).slice(0, 16) : "CONTA"}
           </button>
@@ -1425,7 +1463,7 @@ export default function Home() {
       <section className="game-stage" aria-label="Jogo Casa Morta">
         <canvas ref={canvasRef} aria-label="Mapa da mansão visto de cima" />
 
-        {mode === "running" && <>
+        {(mode === "running" || mode === "paused") && <>
           <div className="room-tag">LOCALIZAÇÃO <b>{hud.room}</b></div>
           <div className="memory-panel"><span>MEMÓRIA DA PRESENÇA</span><i>{[0, 1, 2].map((level) => <em className={level < hud.memory ? "filled" : ""} key={level} />)}</i><small>{hud.memory === 0 ? "OBSERVANDO ROTAS" : hud.memory < 3 ? "APRENDENDO HÁBITOS" : "PADRÃO IDENTIFICADO"}</small></div>
           <div className={`noise-clock ${hud.noiseIn < 5 ? "urgent" : ""}`}><span>PRÓXIMO RUÍDO</span><b>{Math.ceil(hud.noiseIn)}s</b></div>
@@ -1444,7 +1482,20 @@ export default function Home() {
           <div className="rules"><span><b>8s</b> limite escondido</span><span><b>14s</b> para recuperar o fôlego</span><span><b>12</b> cargas espalhadas</span></div>
           <button type="button" onClick={startGame}>ENTRAR NA CASA <span>→</span></button>
           <button className="account-cta" type="button" onClick={openAccount}>{user ? "VER MEU HISTÓRICO" : "ENTRAR PARA SALVAR DESEMPENHO"}</button>
-          <div className="keys"><span><kbd>WASD</kbd> MOVER</span><span><kbd>SHIFT</kbd> CORRER</span><span><kbd>MOUSE</kbd> MIRAR</span><span><kbd>F</kbd> LUZ</span><span><kbd>E</kbd> ESCONDER</span></div>
+          <div className="keys"><span><kbd>WASD</kbd> MOVER</span><span><kbd>SHIFT</kbd> CORRER</span><span><kbd>MOUSE</kbd> MIRAR</span><span><kbd>F</kbd> LUZ</span><span><kbd>E</kbd> ESCONDER</span><span><kbd>ESC</kbd> PAUSAR</span></div>
+        </div>}
+
+        {mode === "paused" && <div className="pause-overlay">
+          <section className="pause-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+            <p className="eyebrow">O TEMPO PAROU</p>
+            <h2 id="pause-title">JOGO PAUSADO</h2>
+            <p>A Presença ficará imóvel enquanto você estiver neste menu.</p>
+            <div className="pause-actions">
+              <button type="button" onClick={togglePause}>CONTINUAR <span>▶</span></button>
+              <button className="exit-game" type="button" onClick={exitGame}>SAIR DA PARTIDA</button>
+            </div>
+            <small>PRESSIONE <kbd>ESC</kbd> PARA CONTINUAR</small>
+          </section>
         </div>}
 
         {mode === "won" && <div className="result-card result-win">
