@@ -302,7 +302,7 @@ function nearestFreeCell(col: number, row: number, cols: number, rows: number, g
 }
 
 function findPath(start: Point, goal: Point) {
-  const grid = 64;
+  const grid = 40;
   const cols = Math.ceil(MAP_W / grid);
   const rows = Math.ceil(MAP_H / grid);
   const startCell = nearestFreeCell(Math.floor(start.x / grid), Math.floor(start.y / grid), cols, rows, grid);
