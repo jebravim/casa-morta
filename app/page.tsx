@@ -82,6 +82,7 @@ type Hud = {
   monster: MonsterMode;
   noiseIn: number;
   hidden: boolean;
+  holdingBreath: boolean;
   hideRemaining: number;
   cooldown: number;
   prompt: string;
@@ -106,6 +107,8 @@ const MONSTER_CHASE_ACCELERATION = .055;
 const MONSTER_INVESTIGATE_SPEED = 160;
 const MONSTER_PATROL_SPEED = 125;
 const MONSTER_PATROL_ACCELERATION = .07;
+const HELD_BREATH_DRAIN = 1;
+const RELEASED_BREATH_DRAIN = 2.4;
 
 const ROOMS = [
   { name: "QUARTO PRINCIPAL", floor: "wood", x: 40, y: 40, w: 560, h: 480 },
@@ -390,7 +393,7 @@ function makeGame(preview = false): Game {
 
 const initialHud: Hud = {
   remaining: 150, battery: INITIAL_FLASHLIGHT_BATTERY, stamina: 100, room: "PORÃO", monster: "espreitando",
-  noiseIn: 20, hidden: false, hideRemaining: 8, cooldown: 0, prompt: "", message: "", memory: 0, collected: 0,
+  noiseIn: 20, hidden: false, holdingBreath: false, hideRemaining: 8, cooldown: 0, prompt: "", message: "", memory: 0, collected: 0,
 };
 
 function formatTime(seconds: number) {
@@ -654,6 +657,7 @@ export default function Home() {
     if (!game || game.mode !== "running") return;
     if (game.hiddenSpot) {
       game.hiddenSpot = null;
+      game.keys.delete("space");
       game.hideCooldown = 14;
       game.hideRemaining = 8;
       message(game, "RECUPERE O FÔLEGO ANTES DE SE ESCONDER DE NOVO");
@@ -669,7 +673,7 @@ export default function Home() {
     game.player.x = spot.check.x;
     game.player.y = spot.check.y;
     const uses = game.hideUses[spot.id];
-    message(game, uses > 1 ? "ELA SE LEMBRA DESTE LUGAR" : "SEGURE A RESPIRAÇÃO — 8 SEGUNDOS");
+    message(game, uses > 1 ? "ELA SE LEMBRA DESTE LUGAR — SEGURE ESPAÇO" : "SEGURE ESPAÇO PARA PRENDER A RESPIRAÇÃO");
     tone(game, 92, .45, .04, "triangle");
   }, []);
 
@@ -751,21 +755,21 @@ export default function Home() {
     const keyDown = (event: KeyboardEvent) => {
       const game = gameRef.current;
       if (!game) return;
-      const key = event.key.toLowerCase();
+      const key = event.code === "Space" ? "space" : event.key.toLowerCase();
       if (!event.repeat && key === "escape") {
         event.preventDefault();
         togglePause();
         return;
       }
       if (game.mode !== "running") return;
-      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift"].includes(key)) {
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift", "space"].includes(key)) {
         event.preventDefault();
         game.keys.add(key);
       }
       if (!event.repeat && key === "f") toggleFlashlight();
       if (!event.repeat && key === "e") interact();
     };
-    const keyUp = (event: KeyboardEvent) => gameRef.current?.keys.delete(event.key.toLowerCase());
+    const keyUp = (event: KeyboardEvent) => gameRef.current?.keys.delete(event.code === "Space" ? "space" : event.key.toLowerCase());
     const pointerMove = (event: PointerEvent) => {
       const game = gameRef.current;
       if (!game || !canvas) return;
@@ -799,9 +803,11 @@ export default function Home() {
       game.hideCooldown = Math.max(0, game.hideCooldown - dt);
       if (game.hiddenSpot) {
         game.hidingSeconds += dt;
-        game.hideRemaining -= dt;
+        const holdingBreath = game.keys.has("space");
+        game.hideRemaining -= dt * (holdingBreath ? HELD_BREATH_DRAIN : RELEASED_BREATH_DRAIN);
         if (game.hideRemaining <= 0) {
           game.hiddenSpot = null;
+          game.keys.delete("space");
           game.hideRemaining = 8;
           game.hideCooldown = 15;
           game.noisePulse = { ...game.player, life: 1.25 };
@@ -975,12 +981,14 @@ export default function Home() {
         const topRoomHeat = Math.max(0, ...Object.values(game.roomHeat));
         const memory = clamp(Math.floor(totalHideUses / 2) + Math.floor(topRoomHeat / 35), 0, 3);
         let prompt = "";
-        if (game.hiddenSpot) prompt = `[E] SAIR — FÔLEGO ${game.hideRemaining.toFixed(1)}s`;
+        if (game.hiddenSpot) prompt = game.keys.has("space")
+          ? `[ESPAÇO] PRENDENDO A RESPIRAÇÃO — [E] SAIR`
+          : `SEGURE [ESPAÇO] PARA PRENDER A RESPIRAÇÃO — [E] SAIR`;
         else if (spot) prompt = game.hideCooldown > 0 ? `SEM FÔLEGO — ${Math.ceil(game.hideCooldown)}s` : `[E] ESCONDER — ${spot.label.toUpperCase()}`;
         setHud({
           remaining: 150 - game.elapsed, battery: game.battery, stamina: game.stamina,
           room: currentRoom(game.player).name, monster: monster.mode, noiseIn: 20 - (game.elapsed % 20),
-          hidden: Boolean(game.hiddenSpot), hideRemaining: game.hideRemaining, cooldown: game.hideCooldown,
+          hidden: Boolean(game.hiddenSpot), holdingBreath: game.keys.has("space"), hideRemaining: game.hideRemaining, cooldown: game.hideCooldown,
           prompt, message: game.message, memory, collected: game.collected,
         });
       }
@@ -1481,7 +1489,11 @@ export default function Home() {
           <div className={`noise-clock ${hud.noiseIn < 5 ? "urgent" : ""}`}><span>PRÓXIMO RUÍDO</span><b>{Math.ceil(hud.noiseIn)}s</b></div>
           {hud.message && <div className="game-message">{hud.message}</div>}
           {hud.prompt && <div className="interaction-prompt">{hud.prompt}</div>}
-          {hud.hidden && <div className="breath-meter"><span>FÔLEGO</span><i><em style={{ width: `${hud.hideRemaining / 8 * 100}%` }} /></i></div>}
+          {hud.hidden && <div className={`breath-meter ${hud.holdingBreath ? "holding" : "released"}`}>
+            <span>{hud.holdingBreath ? "PRENDENDO A RESPIRAÇÃO" : <>SEGURE <kbd>ESPAÇO</kbd> PARA NÃO RESPIRAR</>}</span>
+            <i><em style={{ width: `${hud.hideRemaining / 8 * 100}%` }} /></i>
+            <small>{hud.holdingBreath ? "NÃO SOLTE ATÉ SAIR DO ESCONDERIJO" : "O FÔLEGO ESTÁ ACABANDO MAIS RÁPIDO"}</small>
+          </div>}
           <aside className="objective"><b>OBJETIVO</b><span>Sobreviva até o amanhecer</span><small>{hud.collected}/12 cargas encontradas</small></aside>
           <aside className="charge"><div><b>{Math.round(hud.battery)}%</b><span>LANTERNA <kbd>F</kbd></span></div><i><em style={{ width: `${hud.battery}%` }} /></i></aside>
           <aside className="stamina"><span>FÔLEGO DE CORRIDA</span><i><em style={{ width: `${hud.stamina}%` }} /></i></aside>
@@ -1494,7 +1506,7 @@ export default function Home() {
           <div className="rules"><span><b>8s</b> limite escondido</span><span><b>14s</b> para recuperar o fôlego</span><span><b>12</b> cargas espalhadas</span></div>
           <button type="button" onClick={startGame}>ENTRAR NA CASA <span>→</span></button>
           <button className="account-cta" type="button" onClick={openAccount}>{user ? "VER MEU HISTÓRICO" : "ENTRAR PARA SALVAR DESEMPENHO"}</button>
-          <div className="keys"><span><kbd>WASD</kbd> MOVER</span><span><kbd>SHIFT</kbd> CORRER</span><span><kbd>MOUSE</kbd> MIRAR</span><span><kbd>F</kbd> LUZ</span><span><kbd>E</kbd> ESCONDER</span><span><kbd>ESC</kbd> PAUSAR</span></div>
+          <div className="keys"><span><kbd>WASD</kbd> MOVER</span><span><kbd>SHIFT</kbd> CORRER</span><span><kbd>MOUSE</kbd> MIRAR</span><span><kbd>F</kbd> LUZ</span><span><kbd>E</kbd> ESCONDER</span><span><kbd>ESPAÇO</kbd> FÔLEGO</span><span><kbd>ESC</kbd> PAUSAR</span></div>
         </div>}
 
         {mode === "paused" && <div className="pause-overlay">
@@ -1576,7 +1588,11 @@ export default function Home() {
             <button aria-label="Mover para baixo" onPointerDown={() => holdKey("s", true)} onPointerUp={() => holdKey("s", false)} onPointerCancel={() => holdKey("s", false)}>▼</button>
             <button aria-label="Mover para direita" onPointerDown={() => holdKey("d", true)} onPointerUp={() => holdKey("d", false)} onPointerCancel={() => holdKey("d", false)}>▶</button>
           </div>
-          <div className="action-buttons"><button aria-label="Ligar ou desligar lanterna" onClick={toggleFlashlight}>LUZ</button><button aria-label="Interagir com esconderijo" onClick={interact}>E</button></div>
+          <div className="action-buttons">
+            <button aria-label="Ligar ou desligar lanterna" onClick={toggleFlashlight}>LUZ</button>
+            {hud.hidden && <button className="breath-button" aria-label="Segurar o fôlego" onPointerDown={() => holdKey("space", true)} onPointerUp={() => holdKey("space", false)} onPointerCancel={() => holdKey("space", false)} onPointerLeave={() => holdKey("space", false)}>FÔLEGO</button>}
+            <button aria-label="Interagir com esconderijo" onClick={interact}>E</button>
+          </div>
         </div>}
       </section>
     </main>

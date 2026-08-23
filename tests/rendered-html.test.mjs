@@ -55,6 +55,17 @@ test("offers pause, resume, and exit controls during a match", async () => {
   assert.match(page, /gameRef\.current = makeGame\(true\)/);
 });
 
+test("shows and implements the hold-breath control", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /SEGURE \[ESPAÇO\] PARA PRENDER A RESPIRAÇÃO/);
+  assert.match(page, /event\.code === "Space" \? "space"/);
+  assert.match(page, /game\.keys\.has\("space"\)/);
+  assert.match(page, /HELD_BREATH_DRAIN = 1/);
+  assert.match(page, /RELEASED_BREATH_DRAIN = 2\.4/);
+  assert.match(page, /className="breath-button"/);
+});
+
 test("keeps doorways traversable and applies the latest difficulty tuning", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
