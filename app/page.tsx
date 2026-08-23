@@ -608,6 +608,9 @@ export default function Home() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const darknessLayer = document.createElement("canvas");
+    const darkness = darknessLayer.getContext("2d");
+    if (!darkness) return;
 
     const survivorSprite = new Image();
     survivorSprite.src = "/assets/sobrevivente.png";
@@ -619,8 +622,12 @@ export default function Home() {
       const ratio = Math.min(2, window.devicePixelRatio || 1);
       canvas.width = Math.max(1, Math.round(bounds.width * ratio));
       canvas.height = Math.max(1, Math.round(bounds.height * ratio));
+      darknessLayer.width = canvas.width;
+      darknessLayer.height = canvas.height;
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.imageSmoothingEnabled = false;
+      darkness.setTransform(ratio, 0, 0, ratio, 0, 0);
+      darkness.imageSmoothingEnabled = false;
     };
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
@@ -1181,32 +1188,36 @@ export default function Home() {
       ctx.restore();
 
       const playerScreen = { x: game.player.x - game.camera.x, y: game.player.y - game.camera.y };
-      ctx.save();
-      ctx.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.965)" : "rgba(0,0,0,.62)";
-      ctx.fillRect(0, 0, width, height);
-      ctx.globalCompositeOperation = "destination-out";
+      darkness.setTransform(1, 0, 0, 1, 0, 0);
+      darkness.clearRect(0, 0, darknessLayer.width, darknessLayer.height);
+      darkness.setTransform(ratio, 0, 0, ratio, 0, 0);
+      darkness.globalCompositeOperation = "source-over";
+      darkness.fillStyle = game.hiddenSpot ? "rgba(0,0,0,.97)" : "rgba(0,0,0,.82)";
+      darkness.fillRect(0, 0, width, height);
+      darkness.globalCompositeOperation = "destination-out";
       const glowRadius = game.hiddenSpot ? 48 : PLAYER_LIGHT_RADIUS;
-      const glow = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 16, playerScreen.x, playerScreen.y, glowRadius);
+      const glow = darkness.createRadialGradient(playerScreen.x, playerScreen.y, 16, playerScreen.x, playerScreen.y, glowRadius);
       glow.addColorStop(0, "rgba(0,0,0,1)"); glow.addColorStop(.76, "rgba(0,0,0,1)"); glow.addColorStop(.9, "rgba(0,0,0,.72)"); glow.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
+      darkness.fillStyle = glow; darkness.beginPath(); darkness.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); darkness.fill();
       if (!game.hiddenSpot) {
         for (const light of HOUSE_LIGHTS) {
           const lightX = light.x - game.camera.x;
           const lightY = light.y - game.camera.y;
           if (lightX < -95 || lightY < -95 || lightX > width + 95 || lightY > height + 95) continue;
-          const lampCutout = ctx.createRadialGradient(lightX, lightY, 2, lightX, lightY, 92);
+          const lampCutout = darkness.createRadialGradient(lightX, lightY, 2, lightX, lightY, 92);
           lampCutout.addColorStop(0, "rgba(0,0,0,.34)"); lampCutout.addColorStop(.45, "rgba(0,0,0,.18)"); lampCutout.addColorStop(1, "rgba(0,0,0,0)");
-          ctx.fillStyle = lampCutout; ctx.beginPath(); ctx.arc(lightX, lightY, 92, 0, Math.PI * 2); ctx.fill();
+          darkness.fillStyle = lampCutout; darkness.beginPath(); darkness.arc(lightX, lightY, 92, 0, Math.PI * 2); darkness.fill();
         }
       }
       if (game.flashlightOn && game.battery > 0 && !game.hiddenSpot) {
-        ctx.save(); ctx.translate(playerScreen.x, playerScreen.y); ctx.rotate(game.aim);
-        ctx.beginPath(); ctx.moveTo(9, -14); ctx.lineTo(655, -215); ctx.lineTo(655, 215); ctx.closePath(); ctx.clip();
-        const beam = ctx.createRadialGradient(0, 0, 18, 0, 0, 670);
+        darkness.save(); darkness.translate(playerScreen.x, playerScreen.y); darkness.rotate(game.aim);
+        darkness.beginPath(); darkness.moveTo(9, -14); darkness.lineTo(655, -215); darkness.lineTo(655, 215); darkness.closePath(); darkness.clip();
+        const beam = darkness.createRadialGradient(0, 0, 18, 0, 0, 670);
         beam.addColorStop(0, "rgba(0,0,0,.995)"); beam.addColorStop(.48, "rgba(0,0,0,.96)"); beam.addColorStop(.78, "rgba(0,0,0,.58)"); beam.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = beam; ctx.fillRect(0, -230, 680, 460); ctx.restore();
+        darkness.fillStyle = beam; darkness.fillRect(0, -230, 680, 460); darkness.restore();
       }
-      ctx.restore();
+      darkness.globalCompositeOperation = "source-over";
+      ctx.drawImage(darknessLayer, 0, 0, darknessLayer.width, darknessLayer.height, 0, 0, width, height);
 
       if (!game.hiddenSpot) {
         ctx.save();
