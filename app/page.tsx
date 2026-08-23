@@ -33,6 +33,7 @@ type Monster = Point & {
   angle: number;
   target: Point;
   lastSeen: Point;
+  patrolIndex: number;
   path: Point[];
   pathIndex: number;
   repathIn: number;
@@ -244,6 +245,12 @@ const BATTERY_POSITIONS: Point[] = [
   { x: 285, y: 1465 }, { x: 1130, y: 1430 }, { x: 1510, y: 1210 }, { x: 2140, y: 1460 },
 ];
 
+const PATROL_POINTS: Point[] = [
+  { x: 275, y: 275 }, { x: 1015, y: 365 }, { x: 1575, y: 345 }, { x: 2090, y: 420 },
+  { x: 2200, y: 680 }, { x: 1740, y: 920 }, { x: 940, y: 640 }, { x: 545, y: 970 },
+  { x: 285, y: 1465 }, { x: 1130, y: 1430 }, { x: 1510, y: 1210 }, { x: 2140, y: 1460 },
+];
+
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const pointIn = (point: Point, rect: Rect, pad = 0) => point.x > rect.x - pad && point.x < rect.x + rect.w + pad && point.y > rect.y - pad && point.y < rect.y + rect.h + pad;
@@ -316,7 +323,10 @@ function findPath(start: Point, goal: Point) {
         result.unshift({ x: cell.col * grid + grid / 2, y: cell.row * grid + grid / 2 });
         cursor = came.get(cursor);
       }
-      result.push(goal);
+      const safeGoal = collides(goal, 18)
+        ? { x: goalCell.col * grid + grid / 2, y: goalCell.row * grid + grid / 2 }
+        : goal;
+      if (!result.length || distance(result[result.length - 1], safeGoal) > 4) result.push(safeGoal);
       return result;
     }
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -351,8 +361,8 @@ function makeGame(preview = false): Game {
     visitedRooms: new Set(["PORÃO"]), batteries: BATTERY_POSITIONS.map((point) => ({ ...point, taken: false })),
     message: "", messageUntil: 0, hudClock: 0, lastFrame: performance.now(), audio: null,
     monster: {
-      ...monsterStart, mode: "espreitando", angle: preview ? Math.PI : 0, target: { x: 930, y: 270 },
-      lastSeen: { ...playerStart }, path: [], pathIndex: 0, repathIn: 0, searchUntil: 0, lastCheckedSpot: null,
+      ...monsterStart, mode: "espreitando", angle: preview ? Math.PI : 0, target: { ...PATROL_POINTS[1] },
+      lastSeen: { ...playerStart }, patrolIndex: 1, path: [], pathIndex: 0, repathIn: 0, searchUntil: 0, lastCheckedSpot: null,
     },
   };
 }
@@ -406,10 +416,33 @@ function learnedTarget(game: Game) {
     message(game, "A PRESENÇA ESTÁ CHECANDO SEUS ESCONDERIJOS", 3.2);
     return { ...usedSpots[0].check };
   }
-  const visitedRooms = [...ROOMS].sort((a, b) => game.roomHeat[b.name] - game.roomHeat[a.name]);
-  const pool = visitedRooms.slice(0, 4);
+  const visitedRooms = [...ROOMS].filter((room) => game.roomHeat[room.name] > 0)
+    .sort((a, b) => game.roomHeat[b.name] - game.roomHeat[a.name]);
+  const pool = visitedRooms.length ? visitedRooms.slice(0, 4) : ROOMS;
   const room = pool[Math.floor(Math.random() * pool.length)] ?? ROOMS[Math.floor(Math.random() * ROOMS.length)];
   return { x: room.x + room.w / 2 + (Math.random() - .5) * 180, y: room.y + room.h / 2 + (Math.random() - .5) * 140 };
+}
+
+function nextPatrolTarget(game: Game) {
+  const hasLearnedRoute = Object.values(game.roomHeat).some((heat) => heat > 8) ||
+    Object.values(game.hideUses).some((uses) => uses > 0);
+  if (hasLearnedRoute && Math.random() < .3) return learnedTarget(game);
+  const step = Math.random() < .22 ? 2 : 1;
+  game.monster.patrolIndex = (game.monster.patrolIndex + step) % PATROL_POINTS.length;
+  return { ...PATROL_POINTS[game.monster.patrolIndex] };
+}
+
+function nearbySearchTarget(origin: Point) {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 85 + Math.random() * 155;
+    const candidate = {
+      x: clamp(origin.x + Math.cos(angle) * radius, 55, MAP_W - 55),
+      y: clamp(origin.y + Math.sin(angle) * radius, 55, MAP_H - 55),
+    };
+    if (!collides(candidate, 18)) return candidate;
+  }
+  return { ...origin };
 }
 
 function moveWithCollision(point: Point, dx: number, dy: number, radius: number) {
@@ -686,6 +719,7 @@ export default function Home() {
           game.noisePulse = { ...game.player, life: 1.25 };
           game.monster.mode = "investigando";
           game.monster.target = { ...game.player };
+          game.monster.lastSeen = { ...game.player };
           game.monster.repathIn = 0;
           message(game, "VOCÊ PERDEU O AR — ELA OUVIU", 3.2);
           tone(game, 68, .8, .08, "sawtooth");
@@ -743,6 +777,7 @@ export default function Home() {
         if (game.monster.mode !== "caçando") {
           game.monster.mode = "investigando";
           game.monster.target = { ...game.player };
+          game.monster.lastSeen = { ...game.player };
           game.monster.repathIn = 0;
         }
         message(game, "SEU CORPO FEZ BARULHO — CORRA", 3.3);
@@ -758,7 +793,11 @@ export default function Home() {
         ((coneSight && playerDistance < (monster.mode === "caçando" ? 600 : 410)) || lightBetrays);
 
       if (canSee) {
-        if (monster.mode !== "caçando") { message(game, "ELA VIU VOCÊ", 1.8); tone(game, 45, .65, .07, "sawtooth"); }
+        if (monster.mode !== "caçando") {
+          message(game, "ELA VIU VOCÊ", 1.8);
+          tone(game, 45, .65, .07, "sawtooth");
+          monster.repathIn = 0;
+        }
         monster.mode = "caçando";
         monster.lastSeen = { ...game.player };
         monster.target = { ...game.player };
@@ -774,16 +813,15 @@ export default function Home() {
         if (monster.mode === "investigando") {
           monster.mode = "procurando";
           monster.searchUntil = game.elapsed + 8;
-          monster.target = learnedTarget(game);
+          monster.target = nearbySearchTarget(monster.lastSeen);
         } else if (monster.mode === "procurando") {
-          monster.target = learnedTarget(game);
-          monster.searchUntil = Math.max(monster.searchUntil, game.elapsed + 3.5);
-        } else if (monster.mode === "espreitando") monster.target = learnedTarget(game);
+          monster.target = nearbySearchTarget(monster.lastSeen);
+        } else if (monster.mode === "espreitando") monster.target = nextPatrolTarget(game);
         monster.repathIn = 0;
       }
       if (monster.mode === "procurando" && game.elapsed > monster.searchUntil) {
         monster.mode = "espreitando";
-        monster.target = learnedTarget(game);
+        monster.target = nextPatrolTarget(game);
         monster.repathIn = 0;
       }
 
