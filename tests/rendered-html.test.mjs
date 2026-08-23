@@ -61,7 +61,29 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   assert.match(page, /function insideDoorwayPassage/);
   assert.match(page, /if \(insideDoorwayPassage\(point, radius\)\) return false/);
   assert.match(page, /if \(!collides\(nextX, radius\)\)/);
-  assert.match(page, /FLASHLIGHT_DRAIN_PER_SECOND = 1\.05/);
+  assert.match(page, /INITIAL_FLASHLIGHT_BATTERY = 10/);
+  assert.match(page, /FLASHLIGHT_DRAIN_PER_SECOND = 1\.18/);
+  assert.match(page, /battery: INITIAL_FLASHLIGHT_BATTERY/);
   assert.match(page, /MONSTER_CHASE_SPEED = 180/);
   assert.match(page, /MONSTER_INVESTIGATE_SPEED = 160/);
+
+  const extractArray = (pattern) => {
+    const match = page.match(pattern);
+    assert.ok(match, `Não foi possível ler o mapa com ${pattern}`);
+    return match[1].replace(/ as const/g, "");
+  };
+  const hidingSpots = Function(`return ${extractArray(/const HIDING_SPOTS: HidingSpot\[\] = (\[[\s\S]*?\n\]);/)}`)();
+  const furniture = Function("HIDING_SPOTS", `return ${extractArray(/const FURNITURE: Furniture\[\] = (\[[\s\S]*?\n\]);/)}`)(hidingSpots);
+  const doorways = Function(`return ${extractArray(/const DOORWAYS: Doorway\[\] = (\[[\s\S]*?\n\]);/)}`)();
+
+  for (const doorway of doorways) {
+    const clearance = doorway.axis === "vertical"
+      ? { x: doorway.x - 100, y: doorway.y, w: 200, h: doorway.length }
+      : { x: doorway.x, y: doorway.y - 100, w: doorway.length, h: 200 };
+    for (const item of furniture) {
+      const overlapX = Math.min(item.x + item.w, clearance.x + clearance.w) - Math.max(item.x, clearance.x);
+      const overlapY = Math.min(item.y + item.h, clearance.y + clearance.h) - Math.max(item.y, clearance.y);
+      assert.ok(overlapX <= 0 || overlapY <= 0, `Móvel ${item.kind} próximo demais da porta em ${doorway.x},${doorway.y}`);
+    }
+  }
 });

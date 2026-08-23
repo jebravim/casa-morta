@@ -99,7 +99,8 @@ const PLAYER_LIGHT_RADIUS = 245;
 const FLASHLIGHT_RANGE = 580;
 const FLASHLIGHT_HALF_WIDTH = 190;
 const FLASHLIGHT_HALF_ANGLE = .34;
-const FLASHLIGHT_DRAIN_PER_SECOND = 1.05;
+const INITIAL_FLASHLIGHT_BATTERY = 10;
+const FLASHLIGHT_DRAIN_PER_SECOND = 1.18;
 const MONSTER_CHASE_SPEED = 180;
 const MONSTER_CHASE_ACCELERATION = .055;
 const MONSTER_INVESTIGATE_SPEED = 160;
@@ -149,34 +150,34 @@ const HIDING_SPOTS: HidingSpot[] = [
   { id: "office-desk", label: "embaixo da escrivaninha", kind: "cama", x: 2010, y: 745, w: 162, h: 82, check: { x: 2090, y: 870 } },
   { id: "storage-crates", label: "atrás das caixas", kind: "armário", x: 390, y: 1320, w: 120, h: 112, check: { x: 350, y: 1375 } },
   { id: "basement-locker", label: "armário do porão", kind: "armário", x: 668, y: 1370, w: 80, h: 126, check: { x: 780, y: 1435 } },
-  { id: "laundry-sheet", label: "lençóis pendurados", kind: "cortina", x: 1670, y: 1280, w: 78, h: 140, check: { x: 1635, y: 1350 } },
+  { id: "laundry-sheet", label: "lençóis pendurados", kind: "cortina", x: 1670, y: 1320, w: 78, h: 140, check: { x: 1635, y: 1390 } },
   { id: "sealed-wardrobe", label: "confessionário", kind: "armário", x: 2250, y: 1120, w: 74, h: 128, check: { x: 2210, y: 1185 } },
 ];
 
 const FURNITURE: Furniture[] = [
   ...HIDING_SPOTS.map((spot) => ({ ...spot, kind: spot.kind === "cama" ? "bed" as const : "wardrobe" as const })),
   { kind: "piano", x: 210, y: 360, w: 178, h: 70 },
-  { kind: "shelf", x: 680, y: 78, w: 230, h: 52 }, { kind: "shelf", x: 680, y: 402, w: 210, h: 52 },
+  { kind: "shelf", x: 680, y: 78, w: 230, h: 52 }, { kind: "shelf", x: 680, y: 365, w: 210, h: 52 },
   { kind: "table", x: 830, y: 225, w: 170, h: 92 }, { kind: "crate", x: 1640, y: 86, w: 92, h: 92 },
   { kind: "table", x: 1945, y: 170, w: 185, h: 92 }, { kind: "crate", x: 2155, y: 100, w: 72, h: 72 },
-  { kind: "counter", x: 260, y: 590, w: 250, h: 62 }, { kind: "counter", x: 470, y: 690, w: 70, h: 230 },
-  { kind: "table", x: 220, y: 820, w: 170, h: 98 }, { kind: "sofa", x: 790, y: 715, w: 210, h: 76 },
-  { kind: "table", x: 820, y: 900, w: 150, h: 70 }, { kind: "table", x: 1390, y: 705, w: 270, h: 100 },
-  { kind: "shelf", x: 1280, y: 930, w: 190, h: 54 }, { kind: "shelf", x: 1880, y: 590, w: 54, h: 250 },
+  { kind: "counter", x: 260, y: 650, w: 250, h: 62 }, { kind: "counter", x: 410, y: 690, w: 70, h: 230 },
+  { kind: "table", x: 220, y: 820, w: 170, h: 98 }, { kind: "sofa", x: 730, y: 715, w: 210, h: 76 },
+  { kind: "table", x: 820, y: 860, w: 150, h: 70 }, { kind: "table", x: 1390, y: 705, w: 270, h: 100 },
+  { kind: "shelf", x: 1280, y: 930, w: 190, h: 54 }, { kind: "shelf", x: 1940, y: 590, w: 54, h: 250 },
   { kind: "sofa", x: 2190, y: 900, w: 120, h: 70 }, { kind: "crate", x: 80, y: 1150, w: 105, h: 105 },
-  { kind: "crate", x: 220, y: 1260, w: 92, h: 92 }, { kind: "shelf", x: 810, y: 1120, w: 260, h: 54 },
-  { kind: "table", x: 930, y: 1280, w: 150, h: 90 }, { kind: "counter", x: 1280, y: 1125, w: 220, h: 62 },
+  { kind: "crate", x: 220, y: 1260, w: 92, h: 92 }, { kind: "shelf", x: 730, y: 1185, w: 220, h: 54 },
+  { kind: "table", x: 930, y: 1280, w: 150, h: 90 }, { kind: "counter", x: 1340, y: 1190, w: 120, h: 62 },
   { kind: "counter", x: 1280, y: 1460, w: 290, h: 60 }, { kind: "table", x: 1950, y: 1270, w: 170, h: 100 },
-  { kind: "dresser", x: 205, y: 68, w: 125, h: 55 }, { kind: "fireplace", x: 515, y: 300, w: 68, h: 128 },
-  { kind: "shelf", x: 925, y: 76, w: 125, h: 52 }, { kind: "fireplace", x: 1088, y: 278, w: 82, h: 128 },
+  { kind: "dresser", x: 205, y: 68, w: 125, h: 55 }, { kind: "fireplace", x: 435, y: 300, w: 68, h: 128 },
+  { kind: "shelf", x: 925, y: 76, w: 125, h: 52 }, { kind: "fireplace", x: 1020, y: 278, w: 82, h: 128 },
   { kind: "dresser", x: 1252, y: 72, w: 108, h: 54 }, { kind: "crate", x: 1655, y: 388, w: 82, h: 72 },
   { kind: "dresser", x: 1848, y: 70, w: 115, h: 52 }, { kind: "table", x: 2180, y: 390, w: 130, h: 74 },
   { kind: "stove", x: 58, y: 588, w: 86, h: 70 }, { kind: "sink", x: 158, y: 588, w: 86, h: 70 },
-  { kind: "stairs", x: 1040, y: 585, w: 118, h: 285 }, { kind: "clock", x: 650, y: 850, w: 54, h: 132 },
-  { kind: "dresser", x: 1680, y: 570, w: 88, h: 220 }, { kind: "fireplace", x: 2268, y: 590, w: 68, h: 145 },
-  { kind: "shelf", x: 72, y: 1390, w: 210, h: 52 }, { kind: "counter", x: 520, y: 1150, w: 58, h: 220 },
-  { kind: "counter", x: 1100, y: 1150, w: 68, h: 220 }, { kind: "bathtub", x: 1535, y: 1110, w: 110, h: 78 },
-  { kind: "sink", x: 1655, y: 1450, w: 95, h: 62 }, { kind: "sofa", x: 1895, y: 1120, w: 220, h: 58 },
+  { kind: "stairs", x: 980, y: 585, w: 118, h: 285 }, { kind: "clock", x: 650, y: 850, w: 54, h: 132 },
+  { kind: "dresser", x: 1680, y: 570, w: 88, h: 120 }, { kind: "fireplace", x: 2268, y: 590, w: 68, h: 145 },
+  { kind: "shelf", x: 72, y: 1390, w: 210, h: 52 }, { kind: "counter", x: 430, y: 1185, w: 58, h: 220 },
+  { kind: "counter", x: 1000, y: 1185, w: 68, h: 220 }, { kind: "bathtub", x: 1535, y: 1190, w: 110, h: 78 },
+  { kind: "sink", x: 1655, y: 1450, w: 95, h: 62 }, { kind: "sofa", x: 1940, y: 1190, w: 220, h: 58 },
   { kind: "sofa", x: 1895, y: 1450, w: 220, h: 58 },
 ];
 
@@ -374,7 +375,7 @@ function makeGame(preview = false): Game {
   const monsterStart = preview ? { x: 1520, y: 860 } : { x: 210, y: 280 };
   return {
     mode: "intro", elapsed: 0, player: playerStart, aim: preview ? 0 : -Math.PI / 2,
-    camera: { x: 0, y: 0 }, keys: new Set(), flashlightOn: true, battery: 68, stamina: 100,
+    camera: { x: 0, y: 0 }, keys: new Set(), flashlightOn: true, battery: INITIAL_FLASHLIGHT_BATTERY, stamina: 100,
     hiddenSpot: null, hideRemaining: 8, hideCooldown: 0, hideUses, roomHeat, heatClock: 0,
     noiseIndex: 0, noisePulse: null, collected: 0, hidingSeconds: 0, flashlightSeconds: 0,
     visitedRooms: new Set(["PORÃO"]), batteries: BATTERY_POSITIONS.map((point) => ({ ...point, taken: false })),
@@ -388,7 +389,7 @@ function makeGame(preview = false): Game {
 }
 
 const initialHud: Hud = {
-  remaining: 150, battery: 68, stamina: 100, room: "PORÃO", monster: "espreitando",
+  remaining: 150, battery: INITIAL_FLASHLIGHT_BATTERY, stamina: 100, room: "PORÃO", monster: "espreitando",
   noiseIn: 20, hidden: false, hideRemaining: 8, cooldown: 0, prompt: "", message: "", memory: 0, collected: 0,
 };
 
