@@ -99,8 +99,11 @@ const PLAYER_LIGHT_RADIUS = 245;
 const FLASHLIGHT_RANGE = 580;
 const FLASHLIGHT_HALF_WIDTH = 190;
 const FLASHLIGHT_HALF_ANGLE = .34;
-const MONSTER_CHASE_SPEED = 142;
-const MONSTER_CHASE_ACCELERATION = .03;
+const MONSTER_CHASE_SPEED = 152;
+const MONSTER_CHASE_ACCELERATION = .035;
+const MONSTER_INVESTIGATE_SPEED = 130;
+const MONSTER_PATROL_SPEED = 100;
+const MONSTER_PATROL_ACCELERATION = .05;
 
 const ROOMS = [
   { name: "QUARTO PRINCIPAL", floor: "wood", x: 40, y: 40, w: 560, h: 480 },
@@ -888,7 +891,9 @@ export default function Home() {
         monster.angle = Math.atan2(dy, dx);
         const speed = monster.mode === "caçando"
           ? MONSTER_CHASE_SPEED + game.elapsed * MONSTER_CHASE_ACCELERATION
-          : monster.mode === "investigando" ? 116 : 88 + game.elapsed * .06;
+          : monster.mode === "investigando"
+            ? MONSTER_INVESTIGATE_SPEED
+            : MONSTER_PATROL_SPEED + game.elapsed * MONSTER_PATROL_ACCELERATION;
         const beforeMove = { x: monster.x, y: monster.y };
         moveWithCollision(monster, dx / length * speed * dt, dy / length * speed * dt, 16);
         monster.stuckFor = distance(beforeMove, monster) < .05 ? monster.stuckFor + dt : 0;
