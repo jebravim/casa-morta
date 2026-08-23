@@ -99,11 +99,12 @@ const PLAYER_LIGHT_RADIUS = 245;
 const FLASHLIGHT_RANGE = 580;
 const FLASHLIGHT_HALF_WIDTH = 190;
 const FLASHLIGHT_HALF_ANGLE = .34;
-const MONSTER_CHASE_SPEED = 166;
-const MONSTER_CHASE_ACCELERATION = .045;
-const MONSTER_INVESTIGATE_SPEED = 145;
-const MONSTER_PATROL_SPEED = 112;
-const MONSTER_PATROL_ACCELERATION = .06;
+const FLASHLIGHT_DRAIN_PER_SECOND = 1.05;
+const MONSTER_CHASE_SPEED = 180;
+const MONSTER_CHASE_ACCELERATION = .055;
+const MONSTER_INVESTIGATE_SPEED = 160;
+const MONSTER_PATROL_SPEED = 125;
+const MONSTER_PATROL_ACCELERATION = .07;
 
 const ROOMS = [
   { name: "QUARTO PRINCIPAL", floor: "wood", x: 40, y: 40, w: 560, h: 480 },
@@ -264,8 +265,18 @@ const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const pointIn = (point: Point, rect: Rect, pad = 0) => point.x > rect.x - pad && point.x < rect.x + rect.w + pad && point.y > rect.y - pad && point.y < rect.y + rect.h + pad;
 const angleDelta = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 
+function insideDoorwayPassage(point: Point, radius: number) {
+  const doorwayDepth = 76;
+  const edgeInset = radius + 2;
+  return DOORWAYS.some((doorway) => doorway.axis === "vertical"
+    ? Math.abs(point.x - doorway.x) < doorwayDepth && point.y > doorway.y + edgeInset && point.y < doorway.y + doorway.length - edgeInset
+    : Math.abs(point.y - doorway.y) < doorwayDepth && point.x > doorway.x + edgeInset && point.x < doorway.x + doorway.length - edgeInset);
+}
+
 function collides(point: Point, radius = PLAYER_RADIUS) {
-  return SOLIDS.some((rect) => pointIn(point, rect, radius));
+  if (WALLS.some((rect) => pointIn(point, rect, radius))) return true;
+  if (insideDoorwayPassage(point, radius)) return false;
+  return FURNITURE.some((rect) => pointIn(point, rect, radius));
 }
 
 function lineBlocked(a: Point, b: Point) {
@@ -486,9 +497,9 @@ function recoveryPath(start: Point, goal: Point) {
 
 function moveWithCollision(point: Point, dx: number, dy: number, radius: number) {
   const nextX = { x: point.x + dx, y: point.y };
-  if (!SOLIDS.some((rect) => pointIn(nextX, rect, radius))) point.x = nextX.x;
+  if (!collides(nextX, radius)) point.x = nextX.x;
   const nextY = { x: point.x, y: point.y + dy };
-  if (!SOLIDS.some((rect) => pointIn(nextY, rect, radius))) point.y = nextY.y;
+  if (!collides(nextY, radius)) point.y = nextY.y;
 }
 
 export default function Home() {
@@ -823,7 +834,7 @@ export default function Home() {
 
       if (game.flashlightOn && game.battery > 0 && !game.hiddenSpot) {
         game.flashlightSeconds += dt;
-        game.battery = Math.max(0, game.battery - .78 * dt);
+        game.battery = Math.max(0, game.battery - FLASHLIGHT_DRAIN_PER_SECOND * dt);
         if (game.battery === 0) { game.flashlightOn = false; message(game, "A LUZ MORREU"); }
       }
 

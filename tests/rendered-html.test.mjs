@@ -54,3 +54,14 @@ test("offers pause, resume, and exit controls during a match", async () => {
   assert.match(page, /SAIR DA PARTIDA/);
   assert.match(page, /gameRef\.current = makeGame\(true\)/);
 });
+
+test("keeps doorways traversable and applies the latest difficulty tuning", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /function insideDoorwayPassage/);
+  assert.match(page, /if \(insideDoorwayPassage\(point, radius\)\) return false/);
+  assert.match(page, /if \(!collides\(nextX, radius\)\)/);
+  assert.match(page, /FLASHLIGHT_DRAIN_PER_SECOND = 1\.05/);
+  assert.match(page, /MONSTER_CHASE_SPEED = 180/);
+  assert.match(page, /MONSTER_INVESTIGATE_SPEED = 160/);
+});
