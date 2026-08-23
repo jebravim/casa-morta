@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { neon, type GameSessionRecord, type PlayerAccount } from "../lib/neon";
 
@@ -50,6 +50,7 @@ type Game = {
   monster: Monster;
   aim: number;
   camera: Point;
+  joystick: Point;
   keys: Set<string>;
   flashlightOn: boolean;
   battery: number;
@@ -143,8 +144,8 @@ const WALLS: Rect[] = [
 ];
 
 const HIDING_SPOTS: HidingSpot[] = [
-  { id: "wardrobe-bedroom", label: "roupeiro antigo", kind: "armário", x: 82, y: 82, w: 76, h: 112, check: { x: 185, y: 140 } },
-  { id: "bed-bedroom", label: "debaixo da cama", kind: "cama", x: 352, y: 132, w: 158, h: 86, check: { x: 430, y: 260 } },
+  { id: "wardrobe-bedroom", label: "roupeiro antigo", kind: "armário", x: 72, y: 72, w: 80, h: 124, check: { x: 190, y: 140 } },
+  { id: "bed-bedroom", label: "debaixo da cama", kind: "cama", x: 245, y: 82, w: 205, h: 104, check: { x: 350, y: 225 } },
   { id: "library-curtain", label: "atrás da cortina", kind: "cortina", x: 1082, y: 74, w: 78, h: 122, check: { x: 1048, y: 150 } },
   { id: "child-bed", label: "cama infantil", kind: "cama", x: 1385, y: 170, w: 142, h: 78, check: { x: 1455, y: 286 } },
   { id: "atelier-wardrobe", label: "armário de telas", kind: "armário", x: 2240, y: 330, w: 76, h: 122, check: { x: 2205, y: 390 } },
@@ -159,7 +160,7 @@ const HIDING_SPOTS: HidingSpot[] = [
 
 const FURNITURE: Furniture[] = [
   ...HIDING_SPOTS.map((spot) => ({ ...spot, kind: spot.kind === "cama" ? "bed" as const : "wardrobe" as const })),
-  { kind: "piano", x: 210, y: 360, w: 178, h: 70 },
+  { kind: "piano", x: 70, y: 390, w: 190, h: 65 },
   { kind: "shelf", x: 680, y: 78, w: 230, h: 52 }, { kind: "shelf", x: 680, y: 365, w: 210, h: 52 },
   { kind: "table", x: 830, y: 225, w: 170, h: 92 }, { kind: "crate", x: 1640, y: 86, w: 92, h: 92 },
   { kind: "table", x: 1945, y: 170, w: 185, h: 92 }, { kind: "crate", x: 2155, y: 100, w: 72, h: 72 },
@@ -171,7 +172,7 @@ const FURNITURE: Furniture[] = [
   { kind: "crate", x: 220, y: 1260, w: 92, h: 92 }, { kind: "shelf", x: 730, y: 1185, w: 220, h: 54 },
   { kind: "table", x: 930, y: 1280, w: 150, h: 90 }, { kind: "counter", x: 1340, y: 1190, w: 120, h: 62 },
   { kind: "counter", x: 1280, y: 1460, w: 290, h: 60 }, { kind: "table", x: 1950, y: 1270, w: 170, h: 100 },
-  { kind: "dresser", x: 205, y: 68, w: 125, h: 55 }, { kind: "fireplace", x: 435, y: 300, w: 68, h: 128 },
+  { kind: "dresser", x: 70, y: 245, w: 145, h: 55 }, { kind: "fireplace", x: 495, y: 375, w: 68, h: 130 },
   { kind: "shelf", x: 925, y: 76, w: 125, h: 52 }, { kind: "fireplace", x: 1020, y: 278, w: 82, h: 128 },
   { kind: "dresser", x: 1252, y: 72, w: 108, h: 54 }, { kind: "crate", x: 1655, y: 388, w: 82, h: 72 },
   { kind: "dresser", x: 1848, y: 70, w: 115, h: 52 }, { kind: "table", x: 2180, y: 390, w: 130, h: 74 },
@@ -185,7 +186,7 @@ const FURNITURE: Furniture[] = [
 ];
 
 const RUGS: Rect[] = [
-  { x: 210, y: 245, w: 245, h: 92 }, { x: 760, y: 185, w: 315, h: 150 },
+  { x: 240, y: 220, w: 280, h: 120 }, { x: 760, y: 185, w: 315, h: 150 },
   { x: 1328, y: 294, w: 300, h: 118 }, { x: 1918, y: 305, w: 250, h: 118 },
   { x: 690, y: 770, w: 395, h: 165 }, { x: 1288, y: 638, w: 305, h: 330 },
   { x: 1945, y: 800, w: 285, h: 165 }, { x: 820, y: 1225, w: 285, h: 155 },
@@ -387,7 +388,7 @@ function makeGame(preview = false): Game {
   const monsterStart = preview ? { x: 1520, y: 860 } : { x: 210, y: 280 };
   return {
     mode: "intro", elapsed: 0, player: playerStart, aim: preview ? 0 : -Math.PI / 2,
-    camera: { x: 0, y: 0 }, keys: new Set(), flashlightOn: true, battery: INITIAL_FLASHLIGHT_BATTERY, stamina: 100,
+    camera: { x: 0, y: 0 }, joystick: { x: 0, y: 0 }, keys: new Set(), flashlightOn: true, battery: INITIAL_FLASHLIGHT_BATTERY, stamina: 100,
     hiddenSpot: null, hideRemaining: 8, hideCooldown: 0, hideUses, roomHeat, heatClock: 0,
     noiseIndex: 0, noisePulse: null, collected: 0, hidingSeconds: 0, flashlightSeconds: 0,
     visitedRooms: new Set(["PORÃO"]), batteries: BATTERY_POSITIONS.map((point) => ({ ...point, taken: false })),
@@ -517,6 +518,7 @@ function moveWithCollision(point: Point, dx: number, dy: number, radius: number)
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const joystickRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Game | null>(null);
   const animationRef = useRef<number>(0);
   const userRef = useRef<PlayerAccount | null>(null);
@@ -535,6 +537,7 @@ export default function Home() {
   const [playerName, setPlayerName] = useState("");
   const [history, setHistory] = useState<GameSessionRecord[]>([]);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [joystickVisual, setJoystickVisual] = useState({ x: 0, y: 0, active: false });
 
   useEffect(() => {
     if (gameRef.current === null) gameRef.current = makeGame(true);
@@ -698,6 +701,7 @@ export default function Home() {
     gameRef.current = fresh;
     setHud(initialHud);
     setSaveState("idle");
+    setJoystickVisual({ x: 0, y: 0, active: false });
     setMode("running");
   }, []);
 
@@ -707,6 +711,8 @@ export default function Home() {
     if (game.mode === "running") {
       game.mode = "paused";
       game.keys.clear();
+      game.joystick = { x: 0, y: 0 };
+      setJoystickVisual({ x: 0, y: 0, active: false });
       void game.audio?.suspend().catch(() => undefined);
       setMode("paused");
       return;
@@ -721,6 +727,7 @@ export default function Home() {
     const game = gameRef.current;
     if (!game) return;
     game.keys.clear();
+    game.joystick = { x: 0, y: 0 };
     game.flashlightOn = false;
     const audio = game.audio;
     game.audio = null;
@@ -728,6 +735,7 @@ export default function Home() {
     gameRef.current = makeGame(true);
     setHud(initialHud);
     setSaveState("idle");
+    setJoystickVisual({ x: 0, y: 0, active: false });
     setMode("intro");
   }, []);
 
@@ -794,6 +802,8 @@ export default function Home() {
       if (game.mode !== "running") return;
       game.mode = result;
       game.keys.clear();
+      game.joystick = { x: 0, y: 0 };
+      setJoystickVisual({ x: 0, y: 0, active: false });
       setMode(result);
       saveGameSessionRef.current(game, result);
       tone(game, result === "won" ? 420 : 46, result === "won" ? 1.2 : 1.8, .075, result === "won" ? "sine" : "sawtooth");
@@ -829,8 +839,8 @@ export default function Home() {
           tone(game, 68, .8, .08, "sawtooth");
         }
       } else {
-        let x = 0;
-        let y = 0;
+        let x = game.joystick.x;
+        let y = game.joystick.y;
         if (game.keys.has("w") || game.keys.has("arrowup")) y -= 1;
         if (game.keys.has("s") || game.keys.has("arrowdown")) y += 1;
         if (game.keys.has("a") || game.keys.has("arrowleft")) x -= 1;
@@ -840,7 +850,7 @@ export default function Home() {
         const speed = sprinting ? PLAYER_SPRINT_SPEED : PLAYER_WALK_SPEED;
         if (moving) {
           const length = Math.hypot(x, y);
-          x /= length; y /= length;
+          if (length > 1) { x /= length; y /= length; }
           moveWithCollision(game.player, x * speed * dt, y * speed * dt, PLAYER_RADIUS);
           if (sprinting) game.stamina = Math.max(0, game.stamina - 25 * dt);
           else game.stamina = Math.min(100, game.stamina + 11 * dt);
@@ -1469,6 +1479,43 @@ export default function Home() {
     if (active) game.keys.add(key); else game.keys.delete(key);
   };
 
+  const updateJoystick = useCallback((clientX: number, clientY: number) => {
+    const control = joystickRef.current;
+    const game = gameRef.current;
+    if (!control || !game || game.mode !== "running") return;
+    const bounds = control.getBoundingClientRect();
+    const centerX = bounds.left + bounds.width / 2;
+    const centerY = bounds.top + bounds.height / 2;
+    const maxTravel = Math.max(1, (Math.min(bounds.width, bounds.height) - 42) / 2);
+    const rawX = clientX - centerX;
+    const rawY = clientY - centerY;
+    const magnitude = Math.hypot(rawX, rawY);
+    const scale = magnitude > maxTravel ? maxTravel / magnitude : 1;
+    const x = rawX * scale;
+    const y = rawY * scale;
+    game.joystick = { x: x / maxTravel, y: y / maxTravel };
+    setJoystickVisual({ x, y, active: true });
+  }, []);
+
+  const startJoystick = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    updateJoystick(event.clientX, event.clientY);
+  }, [updateJoystick]);
+
+  const moveJoystick = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    event.preventDefault();
+    updateJoystick(event.clientX, event.clientY);
+  }, [updateJoystick]);
+
+  const releaseJoystick = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    const game = gameRef.current;
+    if (game) game.joystick = { x: 0, y: 0 };
+    setJoystickVisual({ x: 0, y: 0, active: false });
+  }, []);
+
   const statusLabel = hud.monster === "caçando" ? "PERSEGUIÇÃO" : hud.monster === "investigando" ? "ELA OUVIU" : hud.monster === "procurando" ? "PROCURANDO VOCÊ" : "PRESENÇA À ESPREITA";
   const victories = history.filter((entry) => entry.result === "won").length;
   const bestSurvival = history.reduce((best, entry) => Math.max(best, entry.survival_seconds), 0);
@@ -1590,11 +1637,9 @@ export default function Home() {
         </div>}
 
         {mode === "running" && <div className="mobile-controls" aria-label="Controles de toque">
-          <div className="dpad">
-            <button aria-label="Mover para cima" onPointerDown={() => holdKey("w", true)} onPointerUp={() => holdKey("w", false)} onPointerCancel={() => holdKey("w", false)}>▲</button>
-            <button aria-label="Mover para esquerda" onPointerDown={() => holdKey("a", true)} onPointerUp={() => holdKey("a", false)} onPointerCancel={() => holdKey("a", false)}>◀</button>
-            <button aria-label="Mover para baixo" onPointerDown={() => holdKey("s", true)} onPointerUp={() => holdKey("s", false)} onPointerCancel={() => holdKey("s", false)}>▼</button>
-            <button aria-label="Mover para direita" onPointerDown={() => holdKey("d", true)} onPointerUp={() => holdKey("d", false)} onPointerCancel={() => holdKey("d", false)}>▶</button>
+          <div ref={joystickRef} className={`digital-joystick ${joystickVisual.active ? "active" : ""}`} role="group" aria-label="Joystick digital para movimentação" onPointerDown={startJoystick} onPointerMove={moveJoystick} onPointerUp={releaseJoystick} onPointerCancel={releaseJoystick}>
+            <span className="joystick-guide" />
+            <span className="joystick-knob" style={{ transform: `translate(calc(-50% + ${joystickVisual.x}px), calc(-50% + ${joystickVisual.y}px))` }} />
           </div>
           <div className="action-buttons">
             <button aria-label="Ligar ou desligar lanterna" onClick={toggleFlashlight}>LUZ</button>

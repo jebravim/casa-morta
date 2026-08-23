@@ -267,13 +267,16 @@ kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9
   .account-summary { grid-template-columns: 1fr 1fr; }
   .account-summary span:last-child { grid-column: 1 / -1; }
   .history-row dl { grid-template-columns: repeat(2, 1fr); }
-  .mobile-controls { display: flex; position: absolute; z-index: 7; inset: auto 10px 10px 10px; justify-content: space-between; pointer-events: none; }
+  .mobile-controls { display: flex; position: absolute; z-index: 7; inset: auto 10px 10px 10px; align-items: end; justify-content: space-between; pointer-events: none; }
   .mobile-controls button { pointer-events: auto; touch-action: none; border: 1px solid #6b705b; background: #111510bb; color: #b9bea0; font-size: 12px; width: 46px; height: 42px; }
-  .dpad { width: 142px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
-  .dpad button:nth-child(1) { grid-column: 2; }
-  .dpad button:nth-child(2) { grid-column: 1; grid-row: 2; }
-  .dpad button:nth-child(3) { grid-column: 2; grid-row: 2; }
-  .dpad button:nth-child(4) { grid-column: 3; grid-row: 2; }
+  .digital-joystick { position: relative; width: 108px; height: 108px; flex: 0 0 108px; border: 2px solid #626850; border-radius: 50%; pointer-events: auto; touch-action: none; background: radial-gradient(circle, #252b22b8 0 23%, #111510c9 24% 58%, #080b08d9 59%); box-shadow: inset 0 0 20px #000b, 0 8px 24px #0009; }
+  .joystick-guide { position: absolute; inset: 13px; border: 1px dashed #525843a8; border-radius: 50%; pointer-events: none; }
+  .joystick-guide::before, .joystick-guide::after { content: ""; position: absolute; left: 50%; top: 50%; background: #5c624c55; transform: translate(-50%, -50%); }
+  .joystick-guide::before { width: 72px; height: 1px; }
+  .joystick-guide::after { width: 1px; height: 72px; }
+  .joystick-knob { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; border: 2px solid #858c68; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 38% 32%, #59604a, #252b22 70%); box-shadow: 0 5px 12px #000c, inset 0 0 8px #a7ad7a33; transition: transform .06s linear; }
+  .digital-joystick.active { border-color: #8e966e; box-shadow: inset 0 0 22px #000b, 0 0 18px #89945d33; }
+  .digital-joystick.active .joystick-knob { border-color: #b5bd83; transition: none; }
   .action-buttons { display: flex; align-items: end; gap: 7px; }
   .action-buttons button { border-radius: 50%; width: 52px; height: 52px; font-size: 9px; }
   .action-buttons .breath-button { width: 62px; border-radius: 8px; border-color: #8b433b; color: #ead5bc; background: #3a1916d9; font-size: 8px; }

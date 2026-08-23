@@ -77,6 +77,21 @@ test("flashlight beam alerts the monster to the player", async () => {
   assert.doesNotMatch(page, /const lightBetrays = game\.flashlightOn/);
 });
 
+test("uses an analog digital joystick on mobile", async () => {
+  const [page, styles] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /joystick: Point/);
+  assert.match(page, /game\.joystick = \{ x: x \/ maxTravel, y: y \/ maxTravel \}/);
+  assert.match(page, /className=\{`digital-joystick/);
+  assert.match(page, /onPointerMove=\{moveJoystick\}/);
+  assert.doesNotMatch(page, /className="dpad"/);
+  assert.match(styles, /\.digital-joystick/);
+  assert.match(styles, /\.joystick-knob/);
+});
+
 test("keeps doorways traversable and applies the latest difficulty tuning", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
@@ -112,4 +127,6 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
 
   assert.match(page, /\{ kind: "table", x: 1360, y: 690, w: 150, h: 225 \}/);
   assert.match(page, /\{ x: 1415, y: 645, w: 40, h: 40, angle: 0 \}/);
+  assert.match(page, /\{ id: "bed-bedroom"[^\n]+x: 245, y: 82, w: 205, h: 104/);
+  assert.match(page, /\{ kind: "piano", x: 70, y: 390, w: 190, h: 65 \}/);
 });
