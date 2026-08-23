@@ -1187,7 +1187,7 @@ export default function Home() {
       ctx.globalCompositeOperation = "destination-out";
       const glowRadius = game.hiddenSpot ? 48 : PLAYER_LIGHT_RADIUS;
       const glow = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 16, playerScreen.x, playerScreen.y, glowRadius);
-      glow.addColorStop(0, "rgba(0,0,0,1)"); glow.addColorStop(.62, "rgba(0,0,0,.96)"); glow.addColorStop(.86, "rgba(0,0,0,.58)"); glow.addColorStop(1, "rgba(0,0,0,0)");
+      glow.addColorStop(0, "rgba(0,0,0,1)"); glow.addColorStop(.76, "rgba(0,0,0,1)"); glow.addColorStop(.9, "rgba(0,0,0,.72)"); glow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
       if (!game.hiddenSpot) {
         for (const light of HOUSE_LIGHTS) {
@@ -1211,9 +1211,6 @@ export default function Home() {
       if (!game.hiddenSpot) {
         ctx.save();
         ctx.globalCompositeOperation = "screen";
-        const nearbyLight = ctx.createRadialGradient(playerScreen.x, playerScreen.y, 12, playerScreen.x, playerScreen.y, glowRadius);
-        nearbyLight.addColorStop(0, "rgba(226,206,143,.26)"); nearbyLight.addColorStop(.62, "rgba(186,170,116,.13)"); nearbyLight.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = nearbyLight; ctx.beginPath(); ctx.arc(playerScreen.x, playerScreen.y, glowRadius, 0, Math.PI * 2); ctx.fill();
         for (const light of HOUSE_LIGHTS) {
           const lightX = light.x - game.camera.x;
           const lightY = light.y - game.camera.y;
