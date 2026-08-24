@@ -63,6 +63,9 @@ type Game = {
   roomHeat: Record<string, number>;
   heatClock: number;
   noiseIndex: number;
+  noiseEvents: number;
+  runNoiseIn: number;
+  runNoiseWarned: boolean;
   noisePulse: (Point & { life: number }) | null;
   batteries: Battery[];
   collected: number;
@@ -109,6 +112,8 @@ const MONSTER_CHASE_ACCELERATION = .055;
 const MONSTER_INVESTIGATE_SPEED = 160;
 const MONSTER_PATROL_SPEED = 125;
 const MONSTER_PATROL_ACCELERATION = .07;
+const RUN_NOISE_INTERVAL = .82;
+const RUN_NOISE_RANGE = 900;
 const HELD_BREATH_DRAIN = 1;
 const RELEASED_BREATH_DRAIN = 2.4;
 
@@ -166,8 +171,8 @@ const FURNITURE: Furniture[] = [
   { kind: "table", x: 830, y: 225, w: 170, h: 92 }, { kind: "crate", x: 1640, y: 86, w: 92, h: 92 },
   { kind: "table", x: 1945, y: 170, w: 185, h: 92 }, { kind: "crate", x: 2155, y: 100, w: 72, h: 72 },
   { kind: "counter", x: 260, y: 650, w: 250, h: 62 }, { kind: "counter", x: 440, y: 720, w: 70, h: 230 },
-  { kind: "table", x: 220, y: 820, w: 170, h: 98 }, { kind: "sofa", x: 730, y: 715, w: 210, h: 76 },
-  { kind: "table", x: 820, y: 860, w: 150, h: 70 }, { kind: "table", x: 1360, y: 690, w: 150, h: 225 },
+  { kind: "table", x: 220, y: 820, w: 170, h: 98 }, { kind: "sofa", x: 820, y: 720, w: 76, h: 210 },
+  { kind: "table", x: 1045, y: 930, w: 150, h: 70 }, { kind: "table", x: 1360, y: 690, w: 150, h: 225 },
   { kind: "shelf", x: 1280, y: 950, w: 140, h: 54 }, { kind: "shelf", x: 1940, y: 590, w: 54, h: 250 },
   { kind: "sofa", x: 2190, y: 900, w: 120, h: 70 }, { kind: "crate", x: 80, y: 1150, w: 105, h: 105 },
   { kind: "crate", x: 220, y: 1260, w: 92, h: 92 }, { kind: "shelf", x: 730, y: 1185, w: 220, h: 54 },
@@ -434,20 +439,32 @@ function findPath(start: Point, goal: Point) {
   return [];
 }
 
+function connectedSpawnPoint(preferred: Point, radius: number, destination: Point) {
+  const primary = safeSpawnPoint(preferred, radius);
+  if (findPath(primary, destination).length) return primary;
+
+  const alternatives = PATROL_POINTS
+    .map((point) => safeSpawnPoint(point, radius))
+    .sort((a, b) => distance(a, preferred) - distance(b, preferred));
+  return alternatives.find((candidate) => findPath(candidate, destination).length) ?? primary;
+}
+
 function makeGame(preview = false): Game {
   const roomHeat = Object.fromEntries(ROOMS.map((room) => [room.name, 0]));
   const hideUses = Object.fromEntries(HIDING_SPOTS.map((spot) => [spot.id, 0]));
   const playerStart = safeSpawnPoint(preview ? { x: 1300, y: 860 } : { x: 925, y: 1450 }, PLAYER_RADIUS);
-  const monsterStart = safeSpawnPoint(preview ? { x: 1600, y: 860 } : { x: 310, y: 350 }, 16);
+  const patrolStart = { ...PATROL_POINTS[1] };
+  const monsterStart = connectedSpawnPoint(preview ? { x: 1600, y: 860 } : { x: 880, y: 640 }, 16, patrolStart);
   return {
     mode: "intro", elapsed: 0, player: playerStart, aim: preview ? 0 : -Math.PI / 2,
     camera: { x: 0, y: 0 }, joystick: { x: 0, y: 0 }, keys: new Set(), flashlightOn: true, battery: INITIAL_FLASHLIGHT_BATTERY, stamina: 100,
     hiddenSpot: null, hideRemaining: 8, hideCooldown: 0, hideUses, roomHeat, heatClock: 0,
-    noiseIndex: 0, noisePulse: null, collected: 0, hidingSeconds: 0, flashlightSeconds: 0,
+    noiseIndex: 0, noiseEvents: 0, runNoiseIn: .35, runNoiseWarned: false, noisePulse: null,
+    collected: 0, hidingSeconds: 0, flashlightSeconds: 0,
     visitedRooms: new Set(["PORÃO"]), batteries: BATTERY_POSITIONS.map((point) => ({ ...point, taken: false })),
     message: "", messageUntil: 0, hudClock: 0, lastFrame: performance.now(), audio: null,
     monster: {
-      ...monsterStart, mode: "espreitando", angle: preview ? Math.PI : 0, target: { ...PATROL_POINTS[1] },
+      ...monsterStart, mode: "espreitando", angle: preview ? Math.PI : 0, target: patrolStart,
       lastSeen: { ...playerStart }, patrolIndex: 1, path: [], pathIndex: 0, repathIn: 0, searchUntil: 0,
       hearingUntil: 0, stuckFor: 0, recoverUntil: 0, lastCheckedSpot: null,
     },
@@ -696,7 +713,7 @@ export default function Home() {
           result,
           survival_seconds: Math.min(150, Math.max(0, Math.round(game.elapsed))),
           batteries_collected: game.collected,
-          noise_events: game.noiseIndex,
+          noise_events: game.noiseEvents,
           hiding_seconds: Number(game.hidingSeconds.toFixed(2)),
           flashlight_seconds: Number(game.flashlightSeconds.toFixed(2)),
           rooms_visited: Math.max(1, game.visitedRooms.size),
@@ -891,6 +908,7 @@ export default function Home() {
           game.hideRemaining = 8;
           game.hideCooldown = 15;
           game.noisePulse = { ...game.player, life: 1.25 };
+          game.noiseEvents += 1;
           game.monster.mode = "investigando";
           game.monster.target = { ...game.player };
           game.monster.lastSeen = { ...game.player };
@@ -918,6 +936,28 @@ export default function Home() {
           else game.stamina = Math.min(100, game.stamina + 11 * dt);
           if (!canvas.matches(":hover")) game.aim = Math.atan2(y, x);
         } else game.stamina = Math.min(100, game.stamina + 17 * dt);
+
+        if (sprinting) {
+          game.runNoiseIn -= dt;
+          if (game.runNoiseIn <= 0) {
+            game.runNoiseIn = RUN_NOISE_INTERVAL;
+            game.noiseEvents += 1;
+            game.noisePulse = { ...game.player, life: .75 };
+            if (!game.runNoiseWarned) {
+              game.runNoiseWarned = true;
+              message(game, "CORRER FAZ BARULHO — ELA PODE OUVIR", 2.8);
+            }
+            if (game.monster.mode !== "caçando" && distance(game.monster, game.player) < RUN_NOISE_RANGE) {
+              game.monster.mode = "investigando";
+              game.monster.target = { ...game.player };
+              game.monster.lastSeen = { ...game.player };
+              game.monster.hearingUntil = game.elapsed + 2.8;
+              game.monster.recoverUntil = 0;
+              game.monster.repathIn = 0;
+            }
+            tone(game, 54, .09, .018, "triangle");
+          }
+        } else game.runNoiseIn = Math.min(.35, game.runNoiseIn + dt * 2);
       }
 
       if (game.flashlightOn && game.battery > 0 && !game.hiddenSpot) {
@@ -949,6 +989,7 @@ export default function Home() {
       const noiseIndex = Math.floor(game.elapsed / 20);
       if (noiseIndex > game.noiseIndex) {
         game.noiseIndex = noiseIndex;
+        game.noiseEvents += 1;
         game.noisePulse = { ...game.player, life: 1.5 };
         if (game.monster.mode !== "caçando") {
           game.monster.mode = "investigando";
@@ -996,7 +1037,7 @@ export default function Home() {
       }
 
       if (monster.mode === "caçando") monster.target = { ...game.player };
-      if (distance(monster, monster.target) < 34) {
+      if (monster.mode !== "caçando" && distance(monster, monster.target) < 34) {
         if (monster.mode === "investigando") {
           monster.mode = "procurando";
           monster.searchUntil = game.elapsed + 8;
@@ -1022,7 +1063,9 @@ export default function Home() {
       if (monster.path.length) {
         monster.pathIndex = furthestReachablePathIndex(monster, monster.path, monster.pathIndex);
       }
-      let waypoint = monster.path[monster.pathIndex] ?? monster.target;
+      const directCloseChase = monster.mode === "caçando" && playerDistance < 150 &&
+        !movementBlocked(monster, game.player, 16);
+      let waypoint = directCloseChase ? game.player : monster.path[monster.pathIndex] ?? monster.target;
       if (movementBlocked(monster, waypoint, 16)) {
         const detour = recoveryPath(monster, monster.target);
         if (detour.length) {
@@ -1641,7 +1684,7 @@ export default function Home() {
           <div className="rules"><span><b>8s</b> limite escondido</span><span><b>14s</b> para recuperar o fôlego</span><span><b>12</b> cargas espalhadas</span></div>
           <button type="button" onClick={startGame}>ENTRAR NA CASA <span>→</span></button>
           <button className="account-cta" type="button" onClick={openAccount}>{user ? "VER MEU HISTÓRICO" : "ENTRAR PARA SALVAR DESEMPENHO"}</button>
-          <div className="keys"><span><kbd>WASD</kbd> MOVER</span><span><kbd>SHIFT</kbd> CORRER</span><span><kbd>MOUSE</kbd> MIRAR</span><span><kbd>F</kbd> LUZ</span><span><kbd>E</kbd> ESCONDER</span><span><kbd>ESPAÇO</kbd> FÔLEGO</span><span><kbd>ESC</kbd> PAUSAR</span></div>
+          <div className="keys"><span><kbd>WASD</kbd> MOVER</span><span><kbd>SHIFT</kbd> CORRER (FAZ BARULHO)</span><span><kbd>MOUSE</kbd> MIRAR</span><span><kbd>F</kbd> LUZ</span><span><kbd>E</kbd> ESCONDER</span><span><kbd>ESPAÇO</kbd> FÔLEGO</span><span><kbd>ESC</kbd> PAUSAR</span></div>
         </div>}
 
         {mode === "paused" && <div className="pause-overlay">

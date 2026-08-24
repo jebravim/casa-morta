@@ -97,7 +97,8 @@ test("keeps the monster from getting trapped against walls", async () => {
 
   assert.match(page, /function safeSpawnPoint\(preferred: Point, radius: number\)/);
   assert.match(page, /if \(!collides\(bounded, clearance\)\) return bounded/);
-  assert.match(page, /const monsterStart = safeSpawnPoint\(preview \? \{ x: 1600, y: 860 \} : \{ x: 310, y: 350 \}, 16\)/);
+  assert.match(page, /function connectedSpawnPoint\(preferred: Point, radius: number, destination: Point\)/);
+  assert.match(page, /const monsterStart = connectedSpawnPoint\(preview \? \{ x: 1600, y: 860 \} : \{ x: 880, y: 640 \}, 16, patrolStart\)/);
   assert.doesNotMatch(page, /monsterStart = preview \? \{ x: 1520, y: 860 \} : \{ x: 210, y: 280 \}/);
   assert.match(page, /nearestFreeCell\([^\n]+origin: Point\)/);
   assert.match(page, /candidates\.find\(\(candidate\) => !movementBlocked\(origin, candidate\.point, 16\)\)/);
@@ -109,6 +110,21 @@ test("keeps the monster from getting trapped against walls", async () => {
   assert.match(page, /const NAV_DIRECTIONS: \[number, number, number\]\[\]/);
   assert.match(page, /if \(distance\(start, startCellPoint\) > 6\) result\.unshift\(startCellPoint\)/);
   assert.match(page, /monster\.pathIndex = furthestReachablePathIndex\(monster, monster\.path, monster\.pathIndex\)/);
+  assert.match(page, /if \(monster\.mode !== "caçando" && distance\(monster, monster\.target\) < 34\)/);
+  assert.match(page, /const directCloseChase = monster\.mode === "caçando" && playerDistance < 150/);
+});
+
+test("running creates noise that attracts a nearby monster", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(page, /const RUN_NOISE_INTERVAL = \.82/);
+  assert.match(page, /const RUN_NOISE_RANGE = 900/);
+  assert.match(page, /if \(sprinting\) \{\s+game\.runNoiseIn -= dt/);
+  assert.match(page, /game\.noiseEvents \+= 1/);
+  assert.match(page, /distance\(game\.monster, game\.player\) < RUN_NOISE_RANGE/);
+  assert.match(page, /CORRER FAZ BARULHO — ELA PODE OUVIR/);
+  assert.match(page, /noise_events: game\.noiseEvents/);
+  assert.match(page, /CORRER \(FAZ BARULHO\)/);
 });
 
 test("keeps doorways traversable and applies the latest difficulty tuning", async () => {
@@ -132,6 +148,8 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   const furniture = Function("HIDING_SPOTS", `return ${extractArray(/const FURNITURE: Furniture\[\] = (\[[\s\S]*?\n\]);/)}`)(hidingSpots);
   const chairs = Function(`return ${extractArray(/const CHAIRS: Chair\[\] = (\[[\s\S]*?\n\]);/)}`)();
   const doorways = Function(`return ${extractArray(/const DOORWAYS: Doorway\[\] = (\[[\s\S]*?\n\]);/)}`)();
+  const walls = Function("MAP_W", "MAP_H", `return ${extractArray(/const WALLS: Rect\[\] = (\[[\s\S]*?\n\]);/)}`)(2400, 1600);
+  const rooms = Function(`return ${extractArray(/const ROOMS = (\[[\s\S]*?\n\]);/)}`)();
 
   const mapItems = [...furniture, ...chairs.map((chair) => ({ ...chair, kind: "chair" }))];
   for (let first = 0; first < mapItems.length; first++) {
@@ -153,6 +171,40 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
       const overlapY = Math.min(item.y + item.h, clearance.y + clearance.h) - Math.max(item.y, clearance.y);
       assert.ok(overlapX <= 0 || overlapY <= 0, `Móvel ${item.kind} próximo demais da porta em ${doorway.x},${doorway.y}`);
     }
+  }
+
+  const pointInRect = (point, rect, padding = 0) => point.x > rect.x - padding &&
+    point.x < rect.x + rect.w + padding && point.y > rect.y - padding && point.y < rect.y + rect.h + padding;
+  const blocked = (point) => [...walls, ...furniture].some((rect) => pointInRect(point, rect, 18));
+  for (const room of rooms) {
+    const cells = [];
+    for (let y = room.y + 20; y < room.y + room.h; y += 40) {
+      for (let x = room.x + 20; x < room.x + room.w; x += 40) {
+        if (!blocked({ x, y })) cells.push({ x, y });
+      }
+    }
+    const cellKeys = new Set(cells.map((cell) => `${cell.x},${cell.y}`));
+    const visited = new Set();
+    let components = 0;
+    for (const cell of cells) {
+      const startKey = `${cell.x},${cell.y}`;
+      if (visited.has(startKey)) continue;
+      components += 1;
+      const pending = [cell];
+      visited.add(startKey);
+      while (pending.length) {
+        const current = pending.shift();
+        for (const [dx, dy] of [[40, 0], [-40, 0], [0, 40], [0, -40]]) {
+          const next = { x: current.x + dx, y: current.y + dy };
+          const nextKey = `${next.x},${next.y}`;
+          if (cellKeys.has(nextKey) && !visited.has(nextKey)) {
+            visited.add(nextKey);
+            pending.push(next);
+          }
+        }
+      }
+    }
+    assert.equal(components, 1, `${room.name} possui áreas bloqueadas pelos móveis`);
   }
 
   assert.match(page, /\{ kind: "table", x: 1360, y: 690, w: 150, h: 225 \}/);
