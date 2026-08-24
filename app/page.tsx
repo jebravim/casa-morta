@@ -165,24 +165,24 @@ const FURNITURE: Furniture[] = [
   { kind: "shelf", x: 680, y: 78, w: 230, h: 52 }, { kind: "shelf", x: 680, y: 365, w: 210, h: 52 },
   { kind: "table", x: 830, y: 225, w: 170, h: 92 }, { kind: "crate", x: 1640, y: 86, w: 92, h: 92 },
   { kind: "table", x: 1945, y: 170, w: 185, h: 92 }, { kind: "crate", x: 2155, y: 100, w: 72, h: 72 },
-  { kind: "counter", x: 260, y: 650, w: 250, h: 62 }, { kind: "counter", x: 410, y: 690, w: 70, h: 230 },
+  { kind: "counter", x: 260, y: 650, w: 250, h: 62 }, { kind: "counter", x: 440, y: 720, w: 70, h: 230 },
   { kind: "table", x: 220, y: 820, w: 170, h: 98 }, { kind: "sofa", x: 730, y: 715, w: 210, h: 76 },
   { kind: "table", x: 820, y: 860, w: 150, h: 70 }, { kind: "table", x: 1360, y: 690, w: 150, h: 225 },
   { kind: "shelf", x: 1280, y: 950, w: 140, h: 54 }, { kind: "shelf", x: 1940, y: 590, w: 54, h: 250 },
   { kind: "sofa", x: 2190, y: 900, w: 120, h: 70 }, { kind: "crate", x: 80, y: 1150, w: 105, h: 105 },
   { kind: "crate", x: 220, y: 1260, w: 92, h: 92 }, { kind: "shelf", x: 730, y: 1185, w: 220, h: 54 },
-  { kind: "table", x: 930, y: 1280, w: 150, h: 90 }, { kind: "counter", x: 1340, y: 1190, w: 120, h: 62 },
+  { kind: "table", x: 800, y: 1285, w: 150, h: 90 }, { kind: "counter", x: 1340, y: 1190, w: 120, h: 62 },
   { kind: "counter", x: 1280, y: 1460, w: 290, h: 60 }, { kind: "table", x: 1950, y: 1270, w: 170, h: 100 },
   { kind: "dresser", x: 70, y: 245, w: 145, h: 55 }, { kind: "fireplace", x: 495, y: 375, w: 68, h: 130 },
   { kind: "shelf", x: 925, y: 76, w: 125, h: 52 }, { kind: "fireplace", x: 1020, y: 278, w: 82, h: 128 },
   { kind: "dresser", x: 1252, y: 72, w: 108, h: 54 }, { kind: "crate", x: 1655, y: 388, w: 82, h: 72 },
-  { kind: "dresser", x: 1848, y: 70, w: 115, h: 52 }, { kind: "table", x: 2180, y: 390, w: 130, h: 74 },
+  { kind: "dresser", x: 1848, y: 70, w: 115, h: 52 }, { kind: "table", x: 2000, y: 350, w: 130, h: 74 },
   { kind: "stove", x: 58, y: 588, w: 86, h: 70 }, { kind: "sink", x: 158, y: 588, w: 86, h: 70 },
   { kind: "stairs", x: 980, y: 585, w: 118, h: 285 }, { kind: "clock", x: 650, y: 850, w: 54, h: 132 },
   { kind: "dresser", x: 1640, y: 590, w: 120, h: 72 }, { kind: "fireplace", x: 2268, y: 590, w: 68, h: 145 },
-  { kind: "shelf", x: 72, y: 1390, w: 210, h: 52 }, { kind: "counter", x: 430, y: 1185, w: 58, h: 220 },
+  { kind: "shelf", x: 72, y: 1390, w: 210, h: 52 }, { kind: "counter", x: 322, y: 1185, w: 58, h: 220 },
   { kind: "counter", x: 1000, y: 1185, w: 68, h: 220 }, { kind: "bathtub", x: 1535, y: 1190, w: 110, h: 78 },
-  { kind: "sink", x: 1655, y: 1450, w: 95, h: 62 }, { kind: "sofa", x: 1940, y: 1190, w: 220, h: 58 },
+  { kind: "sink", x: 1645, y: 1480, w: 95, h: 62 }, { kind: "sofa", x: 1940, y: 1190, w: 220, h: 58 },
   { kind: "sofa", x: 1895, y: 1450, w: 220, h: 58 },
 ];
 
@@ -230,13 +230,13 @@ const WINDOWS: WindowFrame[] = [
 ];
 
 const CHAIRS: Chair[] = [
-  { x: 815, y: 185, w: 36, h: 36, angle: 0 }, { x: 1010, y: 245, w: 36, h: 36, angle: Math.PI / 2 },
+  { x: 815, y: 185, w: 36, h: 36, angle: 0 }, { x: 1012, y: 228, w: 36, h: 36, angle: Math.PI / 2 },
   { x: 200, y: 770, w: 38, h: 38, angle: 0 }, { x: 395, y: 842, w: 38, h: 38, angle: Math.PI / 2 },
   { x: 1320, y: 700, w: 40, h: 40, angle: -Math.PI / 2 }, { x: 1320, y: 788, w: 40, h: 40, angle: -Math.PI / 2 },
   { x: 1320, y: 876, w: 40, h: 40, angle: -Math.PI / 2 }, { x: 1510, y: 700, w: 40, h: 40, angle: Math.PI / 2 },
   { x: 1510, y: 788, w: 40, h: 40, angle: Math.PI / 2 }, { x: 1510, y: 876, w: 40, h: 40, angle: Math.PI / 2 },
-  { x: 1415, y: 645, w: 40, h: 40, angle: 0 }, { x: 1415, y: 920, w: 40, h: 40, angle: Math.PI },
-  { x: 1938, y: 715, w: 38, h: 38, angle: 0 }, { x: 2150, y: 780, w: 38, h: 38, angle: Math.PI / 2 },
+  { x: 1415, y: 645, w: 40, h: 40, angle: 0 }, { x: 1430, y: 930, w: 40, h: 40, angle: Math.PI },
+  { x: 2000, y: 842, w: 38, h: 38, angle: 0 }, { x: 2188, y: 770, w: 38, h: 38, angle: Math.PI / 2 },
 ];
 
 const PORTRAITS: Rect[] = [
@@ -264,6 +264,11 @@ const PATROL_POINTS: Point[] = [
   { x: 275, y: 275 }, { x: 1015, y: 365 }, { x: 1575, y: 345 }, { x: 2090, y: 420 },
   { x: 2200, y: 680 }, { x: 1740, y: 920 }, { x: 940, y: 640 }, { x: 545, y: 970 },
   { x: 285, y: 1465 }, { x: 1130, y: 1430 }, { x: 1510, y: 1210 }, { x: 2140, y: 1460 },
+];
+
+const NAV_DIRECTIONS: [number, number, number][] = [
+  [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
+  [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2],
 ];
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -346,7 +351,7 @@ function nearestSpot(point: Point, maxDistance = 82) {
   return best;
 }
 
-function nearestFreeCell(col: number, row: number, cols: number, rows: number, grid: number, origin: Point) {
+function nearestFreeCell(col: number, row: number, cols: number, rows: number, grid: number, origin: Point): { col: number; row: number } {
   const candidates: { col: number; row: number; point: Point }[] = [];
   const visited = new Set<string>();
   for (let radius = 0; radius < 7; radius++) {
@@ -365,7 +370,8 @@ function nearestFreeCell(col: number, row: number, cols: number, rows: number, g
   }
   candidates.sort((a, b) => distance(origin, a.point) - distance(origin, b.point));
   const reachable = candidates.find((candidate) => !movementBlocked(origin, candidate.point, 16));
-  return reachable ?? candidates[0] ?? { col, row };
+  const selected = reachable ?? candidates[0];
+  return selected ? { col: selected.col, row: selected.row } : { col, row };
 }
 
 function findPath(start: Point, goal: Point) {
@@ -394,25 +400,34 @@ function findPath(start: Point, goal: Point) {
         result.unshift({ x: cell.col * grid + grid / 2, y: cell.row * grid + grid / 2 });
         cursor = came.get(cursor);
       }
+      const startCellPoint = { x: startCell.col * grid + grid / 2, y: startCell.row * grid + grid / 2 };
+      if (distance(start, startCellPoint) > 6) result.unshift(startCellPoint);
       const goalCellPoint = { x: goalCell.col * grid + grid / 2, y: goalCell.row * grid + grid / 2 };
-      const lastPoint = result[result.length - 1] ?? { x: startCell.col * grid + grid / 2, y: startCell.row * grid + grid / 2 };
+      const lastPoint = result[result.length - 1] ?? startCellPoint;
       const safeGoal = !collides(goal, 18) && !movementBlocked(lastPoint, goal, 16) ? goal : goalCellPoint;
       if (!result.length || distance(result[result.length - 1], safeGoal) > 4) result.push(safeGoal);
       return result;
     }
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    for (const [dx, dy, stepCost] of NAV_DIRECTIONS) {
       const col = current.col + dx;
       const row = current.row + dy;
       if (col < 0 || row < 0 || col >= cols || row >= rows) continue;
       const point = { x: col * grid + grid / 2, y: row * grid + grid / 2 };
       if (collides(point, 18)) continue;
+      if (dx !== 0 && dy !== 0) {
+        const sideX = { x: col * grid + grid / 2, y: current.row * grid + grid / 2 };
+        const sideY = { x: current.col * grid + grid / 2, y: row * grid + grid / 2 };
+        if (collides(sideX, 18) || collides(sideY, 18)) continue;
+      }
       const nextKey = `${col},${row}`;
-      const nextCost = (cost.get(key) ?? 0) + 1;
+      const nextCost = (cost.get(key) ?? 0) + stepCost;
       if (nextCost >= (cost.get(nextKey) ?? Infinity)) continue;
       cost.set(nextKey, nextCost);
       came.set(nextKey, key);
       positions.set(nextKey, { col, row });
-      const heuristic = Math.abs(col - goalCell.col) + Math.abs(row - goalCell.row);
+      const horizontal = Math.abs(col - goalCell.col);
+      const vertical = Math.abs(row - goalCell.row);
+      const heuristic = Math.max(horizontal, vertical) + (Math.SQRT2 - 1) * Math.min(horizontal, vertical);
       open.push({ col, row, score: nextCost + heuristic });
     }
   }
@@ -527,11 +542,19 @@ function movementBlocked(a: Point, b: Point, radius = 18) {
   return false;
 }
 
+function furthestReachablePathIndex(start: Point, path: Point[], currentIndex: number) {
+  const furthest = Math.min(path.length - 1, currentIndex + 6);
+  for (let index = furthest; index > currentIndex; index--) {
+    if (!movementBlocked(start, path[index], 16)) return index;
+  }
+  return currentIndex;
+}
+
 function recoveryPath(start: Point, goal: Point) {
   const candidates: Point[] = [];
-  for (const radius of [48, 72, 96]) {
-    for (let index = 0; index < 12; index++) {
-      const angle = index / 12 * Math.PI * 2;
+  for (const radius of [48, 80, 112]) {
+    for (let index = 0; index < 16; index++) {
+      const angle = index / 16 * Math.PI * 2;
       const candidate = {
         x: clamp(start.x + Math.cos(angle) * radius, 50, MAP_W - 50),
         y: clamp(start.y + Math.sin(angle) * radius, 50, MAP_H - 50),
@@ -995,6 +1018,9 @@ export default function Home() {
         monster.path = plannedPath.length ? plannedPath : recoveryPath(monster, monster.target);
         monster.pathIndex = 0;
         monster.repathIn = monster.mode === "caçando" ? .45 : 1.05;
+      }
+      if (monster.path.length) {
+        monster.pathIndex = furthestReachablePathIndex(monster, monster.path, monster.pathIndex);
       }
       let waypoint = monster.path[monster.pathIndex] ?? monster.target;
       if (movementBlocked(monster, waypoint, 16)) {

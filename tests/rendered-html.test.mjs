@@ -106,6 +106,9 @@ test("keeps the monster from getting trapped against walls", async () => {
   assert.match(page, /if \(movementBlocked\(monster, waypoint, 16\)\)/);
   assert.match(page, /monster\.recoverUntil = game\.elapsed \+ 1\.35/);
   assert.match(page, /const progress = length - distance\(monster, waypoint\)/);
+  assert.match(page, /const NAV_DIRECTIONS: \[number, number, number\]\[\]/);
+  assert.match(page, /if \(distance\(start, startCellPoint\) > 6\) result\.unshift\(startCellPoint\)/);
+  assert.match(page, /monster\.pathIndex = furthestReachablePathIndex\(monster, monster\.path, monster\.pathIndex\)/);
 });
 
 test("keeps doorways traversable and applies the latest difficulty tuning", async () => {
@@ -129,6 +132,17 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   const furniture = Function("HIDING_SPOTS", `return ${extractArray(/const FURNITURE: Furniture\[\] = (\[[\s\S]*?\n\]);/)}`)(hidingSpots);
   const chairs = Function(`return ${extractArray(/const CHAIRS: Chair\[\] = (\[[\s\S]*?\n\]);/)}`)();
   const doorways = Function(`return ${extractArray(/const DOORWAYS: Doorway\[\] = (\[[\s\S]*?\n\]);/)}`)();
+
+  const mapItems = [...furniture, ...chairs.map((chair) => ({ ...chair, kind: "chair" }))];
+  for (let first = 0; first < mapItems.length; first++) {
+    for (let second = first + 1; second < mapItems.length; second++) {
+      const item = mapItems[first];
+      const other = mapItems[second];
+      const overlapX = Math.min(item.x + item.w, other.x + other.w) - Math.max(item.x, other.x);
+      const overlapY = Math.min(item.y + item.h, other.y + other.h) - Math.max(item.y, other.y);
+      assert.ok(overlapX <= 0 || overlapY <= 0, `${item.kind} sobreposto a ${other.kind}`);
+    }
+  }
 
   for (const doorway of doorways) {
     const clearance = doorway.axis === "vertical"
