@@ -41,6 +41,7 @@ type Monster = Point & {
   hearingUntil: number;
   stuckFor: number;
   recoverUntil: number;
+  roamChangeAt: number;
   lastCheckedSpot: string | null;
 };
 
@@ -103,7 +104,6 @@ const PLAYER_WALK_SPEED = 130;
 const PLAYER_SPRINT_SPEED = 198;
 const PLAYER_LIGHT_RADIUS = 245;
 const FLASHLIGHT_RANGE = 580;
-const FLASHLIGHT_HALF_WIDTH = 190;
 const FLASHLIGHT_HALF_ANGLE = .34;
 const INITIAL_FLASHLIGHT_BATTERY = 10;
 const FLASHLIGHT_DRAIN_PER_SECOND = 1.18;
@@ -342,6 +342,45 @@ function flashlightHits(game: Game, target: Point) {
     !lineBlocked(game.player, target);
 }
 
+function rayRectDistance(origin: Point, direction: Point, rect: Rect) {
+  let near = -Infinity;
+  let far = Infinity;
+  for (const [position, vector, minimum, maximum] of [
+    [origin.x, direction.x, rect.x, rect.x + rect.w],
+    [origin.y, direction.y, rect.y, rect.y + rect.h],
+  ] as [number, number, number, number][]) {
+    if (Math.abs(vector) < .00001) {
+      if (position < minimum || position > maximum) return Infinity;
+      continue;
+    }
+    const first = (minimum - position) / vector;
+    const second = (maximum - position) / vector;
+    near = Math.max(near, Math.min(first, second));
+    far = Math.min(far, Math.max(first, second));
+    if (near > far) return Infinity;
+  }
+  return far < 0 ? Infinity : Math.max(0, near);
+}
+
+function flashlightBeamPolygon(game: Game) {
+  const points: Point[] = [{ ...game.player }];
+  const rayCount = 40;
+  for (let index = 0; index <= rayCount; index++) {
+    const angle = game.aim - FLASHLIGHT_HALF_ANGLE + index / rayCount * FLASHLIGHT_HALF_ANGLE * 2;
+    const direction = { x: Math.cos(angle), y: Math.sin(angle) };
+    let rayLength = FLASHLIGHT_RANGE;
+    for (const solid of SOLIDS) {
+      const hitDistance = rayRectDistance(game.player, direction, solid);
+      if (hitDistance > 6 && hitDistance < rayLength) rayLength = hitDistance;
+    }
+    points.push({
+      x: game.player.x + direction.x * rayLength,
+      y: game.player.y + direction.y * rayLength,
+    });
+  }
+  return points;
+}
+
 function currentRoom(point: Point) {
   return ROOMS.find((room) => pointIn(point, room)) ?? { name: "ENTRE AS PAREDES", x: point.x, y: point.y, w: 0, h: 0 };
 }
@@ -466,7 +505,7 @@ function makeGame(preview = false): Game {
     monster: {
       ...monsterStart, mode: "espreitando", angle: preview ? Math.PI : 0, target: patrolStart,
       lastSeen: { ...playerStart }, patrolIndex: 1, path: [], pathIndex: 0, repathIn: 0, searchUntil: 0,
-      hearingUntil: 0, stuckFor: 0, recoverUntil: 0, lastCheckedSpot: null,
+      hearingUntil: 0, stuckFor: 0, recoverUntil: 0, roamChangeAt: 5, lastCheckedSpot: null,
     },
   };
 }
@@ -536,6 +575,12 @@ function nextPatrolTarget(game: Game) {
   return { ...PATROL_POINTS[game.monster.patrolIndex] };
 }
 
+function setAutonomousRoamTarget(game: Game) {
+  game.monster.target = nextPatrolTarget(game);
+  game.monster.roamChangeAt = game.elapsed + 4.5 + Math.random() * 3.5;
+  game.monster.repathIn = 0;
+}
+
 function nearbySearchTarget(origin: Point) {
   for (let attempt = 0; attempt < 10; attempt++) {
     const angle = Math.random() * Math.PI * 2;
@@ -585,6 +630,60 @@ function recoveryPath(start: Point, goal: Point) {
     if (remaining.length) return [candidate, ...remaining];
   }
   return candidates.length ? [candidates[0]] : [];
+}
+
+function repositionStuckMonster(monster: Monster, goal: Point, elapsed: number) {
+  const doorwayCandidates: Point[] = [];
+  for (const doorway of DOORWAYS) {
+    const lane = doorway.axis === "vertical"
+      ? { x: doorway.x, y: clamp(monster.y, doorway.y + 26, doorway.y + doorway.length - 26) }
+      : { x: clamp(monster.x, doorway.x + 26, doorway.x + doorway.length - 26), y: doorway.y };
+    if (distance(monster, lane) > 112) continue;
+    if (doorway.axis === "vertical") {
+      doorwayCandidates.push({ x: doorway.x - 90, y: lane.y }, { x: doorway.x + 90, y: lane.y });
+    } else {
+      doorwayCandidates.push({ x: lane.x, y: doorway.y - 90 }, { x: lane.x, y: doorway.y + 90 });
+    }
+  }
+
+  const localCandidates: Point[] = [];
+  for (const radius of [32, 52, 76]) {
+    for (let index = 0; index < 16; index++) {
+      const angle = index / 16 * Math.PI * 2;
+      localCandidates.push({
+        x: clamp(monster.x + Math.cos(angle) * radius, 56, MAP_W - 56),
+        y: clamp(monster.y + Math.sin(angle) * radius, 56, MAP_H - 56),
+      });
+    }
+  }
+
+  const candidates = [...doorwayCandidates, ...localCandidates]
+    .filter((candidate, index, list) => !collides(candidate, 18) &&
+      list.findIndex((other) => distance(candidate, other) < 2) === index)
+    .sort((a, b) => distance(a, goal) - distance(b, goal));
+  const directlyReachable = candidates.filter((candidate) => !movementBlocked(monster, candidate, 16));
+  const preferred = directlyReachable.length ? directlyReachable : candidates;
+  let selected: Point | null = null;
+  let route: Point[] = [];
+  for (const candidate of preferred) {
+    const candidateRoute = findPath(candidate, goal);
+    if (!candidateRoute.length) continue;
+    selected = candidate;
+    route = candidateRoute;
+    break;
+  }
+  selected ??= preferred[0] ?? null;
+  if (!selected) return false;
+
+  monster.x = selected.x;
+  monster.y = selected.y;
+  monster.angle = Math.atan2(goal.y - monster.y, goal.x - monster.x);
+  monster.path = route.length ? route : recoveryPath(monster, goal);
+  monster.pathIndex = 0;
+  monster.stuckFor = 0;
+  monster.recoverUntil = elapsed + .8;
+  monster.repathIn = .8;
+  return true;
 }
 
 function moveWithCollision(point: Point, dx: number, dy: number, radius: number) {
@@ -1037,20 +1136,23 @@ export default function Home() {
       }
 
       if (monster.mode === "caçando") monster.target = { ...game.player };
+      if (monster.mode === "espreitando" && game.elapsed >= monster.roamChangeAt) {
+        setAutonomousRoamTarget(game);
+      }
       if (monster.mode !== "caçando" && distance(monster, monster.target) < 34) {
         if (monster.mode === "investigando") {
           monster.mode = "procurando";
           monster.searchUntil = game.elapsed + 8;
           monster.target = nearbySearchTarget(monster.lastSeen);
+          monster.repathIn = 0;
         } else if (monster.mode === "procurando") {
           monster.target = nearbySearchTarget(monster.lastSeen);
-        } else if (monster.mode === "espreitando") monster.target = nextPatrolTarget(game);
-        monster.repathIn = 0;
+          monster.repathIn = 0;
+        } else if (monster.mode === "espreitando") setAutonomousRoamTarget(game);
       }
       if (monster.mode === "procurando" && game.elapsed > monster.searchUntil) {
         monster.mode = "espreitando";
-        monster.target = nextPatrolTarget(game);
-        monster.repathIn = 0;
+        setAutonomousRoamTarget(game);
       }
 
       monster.repathIn -= dt;
@@ -1095,11 +1197,13 @@ export default function Home() {
         const minimumProgress = Math.max(.04, speed * dt * .08);
         monster.stuckFor = progress < minimumProgress ? monster.stuckFor + dt : Math.max(0, monster.stuckFor - dt * 2);
         if (monster.stuckFor > .5) {
-          monster.path = recoveryPath(monster, monster.target);
-          monster.pathIndex = 0;
-          monster.recoverUntil = game.elapsed + 1.35;
-          monster.repathIn = 1.35;
-          monster.stuckFor = 0;
+          if (!repositionStuckMonster(monster, monster.target, game.elapsed)) {
+            monster.path = recoveryPath(monster, monster.target);
+            monster.pathIndex = 0;
+            monster.recoverUntil = game.elapsed + 1.35;
+            monster.repathIn = 1.35;
+            monster.stuckFor = 0;
+          }
         }
       }
 
@@ -1487,6 +1591,19 @@ export default function Home() {
       ctx.restore();
 
       const playerScreen = { x: game.player.x - game.camera.x, y: game.player.y - game.camera.y };
+      const beamPolygon = game.flashlightOn && game.battery > 0 && !game.hiddenSpot
+        ? flashlightBeamPolygon(game)
+        : [];
+      const traceBeamPath = (target: CanvasRenderingContext2D) => {
+        target.beginPath();
+        beamPolygon.forEach((point, index) => {
+          const x = point.x - game.camera.x;
+          const y = point.y - game.camera.y;
+          if (index === 0) target.moveTo(x, y);
+          else target.lineTo(x, y);
+        });
+        target.closePath();
+      };
       darkness.setTransform(1, 0, 0, 1, 0, 0);
       darkness.clearRect(0, 0, darknessLayer.width, darknessLayer.height);
       darkness.setTransform(ratio, 0, 0, ratio, 0, 0);
@@ -1508,12 +1625,20 @@ export default function Home() {
           darkness.fillStyle = lampCutout; darkness.beginPath(); darkness.arc(lightX, lightY, 92, 0, Math.PI * 2); darkness.fill();
         }
       }
-      if (game.flashlightOn && game.battery > 0 && !game.hiddenSpot) {
-        darkness.save(); darkness.translate(playerScreen.x, playerScreen.y); darkness.rotate(game.aim);
-        darkness.beginPath(); darkness.moveTo(9, -14); darkness.lineTo(FLASHLIGHT_RANGE, -FLASHLIGHT_HALF_WIDTH); darkness.lineTo(FLASHLIGHT_RANGE, FLASHLIGHT_HALF_WIDTH); darkness.closePath(); darkness.clip();
-        const beam = darkness.createRadialGradient(0, 0, 18, 0, 0, FLASHLIGHT_RANGE);
+      if (beamPolygon.length) {
+        darkness.save();
+        traceBeamPath(darkness); darkness.clip();
+        const beam = darkness.createRadialGradient(
+          playerScreen.x, playerScreen.y, 18,
+          playerScreen.x, playerScreen.y, FLASHLIGHT_RANGE,
+        );
         beam.addColorStop(0, "rgba(0,0,0,.995)"); beam.addColorStop(.48, "rgba(0,0,0,.96)"); beam.addColorStop(.78, "rgba(0,0,0,.58)"); beam.addColorStop(1, "rgba(0,0,0,0)");
-        darkness.fillStyle = beam; darkness.fillRect(0, -FLASHLIGHT_HALF_WIDTH - 15, FLASHLIGHT_RANGE + 10, FLASHLIGHT_HALF_WIDTH * 2 + 30); darkness.restore();
+        darkness.fillStyle = beam;
+        darkness.fillRect(
+          playerScreen.x - FLASHLIGHT_RANGE, playerScreen.y - FLASHLIGHT_RANGE,
+          FLASHLIGHT_RANGE * 2, FLASHLIGHT_RANGE * 2,
+        );
+        darkness.restore();
       }
       darkness.globalCompositeOperation = "source-over";
       ctx.drawImage(darknessLayer, 0, 0, darknessLayer.width, darknessLayer.height, 0, 0, width, height);
@@ -1529,12 +1654,18 @@ export default function Home() {
           lampWarmth.addColorStop(0, "rgba(205,153,74,.12)"); lampWarmth.addColorStop(1, "rgba(205,153,74,0)");
           ctx.fillStyle = lampWarmth; ctx.beginPath(); ctx.arc(lightX, lightY, 82, 0, Math.PI * 2); ctx.fill();
         }
-        if (game.flashlightOn && game.battery > 0) {
-          ctx.translate(playerScreen.x, playerScreen.y); ctx.rotate(game.aim);
-          ctx.beginPath(); ctx.moveTo(9, -14); ctx.lineTo(FLASHLIGHT_RANGE, -FLASHLIGHT_HALF_WIDTH); ctx.lineTo(FLASHLIGHT_RANGE, FLASHLIGHT_HALF_WIDTH); ctx.closePath(); ctx.clip();
-          const warmBeam = ctx.createRadialGradient(0, 0, 18, 0, 0, FLASHLIGHT_RANGE);
+        if (beamPolygon.length) {
+          traceBeamPath(ctx); ctx.clip();
+          const warmBeam = ctx.createRadialGradient(
+            playerScreen.x, playerScreen.y, 18,
+            playerScreen.x, playerScreen.y, FLASHLIGHT_RANGE,
+          );
           warmBeam.addColorStop(0, "rgba(255,232,157,.3)"); warmBeam.addColorStop(.52, "rgba(230,205,134,.18)"); warmBeam.addColorStop(1, "rgba(0,0,0,0)");
-          ctx.fillStyle = warmBeam; ctx.fillRect(0, -FLASHLIGHT_HALF_WIDTH - 15, FLASHLIGHT_RANGE + 10, FLASHLIGHT_HALF_WIDTH * 2 + 30);
+          ctx.fillStyle = warmBeam;
+          ctx.fillRect(
+            playerScreen.x - FLASHLIGHT_RANGE, playerScreen.y - FLASHLIGHT_RANGE,
+            FLASHLIGHT_RANGE * 2, FLASHLIGHT_RANGE * 2,
+          );
         }
         ctx.restore();
 

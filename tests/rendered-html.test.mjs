@@ -70,10 +70,18 @@ test("flashlight beam alerts the monster to the player", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(page, /function flashlightHits\(game: Game, target: Point\)/);
+  assert.match(page, /function rayRectDistance\(origin: Point, direction: Point, rect: Rect\)/);
+  assert.match(page, /function flashlightBeamPolygon\(game: Game\)/);
+  assert.match(page, /for \(const solid of SOLIDS\)/);
+  assert.match(page, /const hitDistance = rayRectDistance\(game\.player, direction, solid\)/);
+  assert.match(page, /const traceBeamPath = \(target: CanvasRenderingContext2D\)/);
+  assert.match(page, /traceBeamPath\(darkness\); darkness\.clip\(\)/);
+  assert.match(page, /traceBeamPath\(ctx\); ctx\.clip\(\)/);
   assert.match(page, /Math\.abs\(angleDelta\(targetAngle, game\.aim\)\) < FLASHLIGHT_HALF_ANGLE/);
   assert.match(page, /const monsterInBeam = flashlightHits\(game, monster\)/);
   assert.match(page, /const canSee = canSeePlayer \|\| monsterInBeam/);
   assert.match(page, /A LUZ ENTREGOU SUA POSIÇÃO/);
+  assert.doesNotMatch(page, /darkness\.lineTo\(FLASHLIGHT_RANGE/);
   assert.doesNotMatch(page, /const lightBetrays = game\.flashlightOn/);
 });
 
@@ -112,6 +120,14 @@ test("keeps the monster from getting trapped against walls", async () => {
   assert.match(page, /monster\.pathIndex = furthestReachablePathIndex\(monster, monster\.path, monster\.pathIndex\)/);
   assert.match(page, /if \(monster\.mode !== "caçando" && distance\(monster, monster\.target\) < 34\)/);
   assert.match(page, /const directCloseChase = monster\.mode === "caçando" && playerDistance < 150/);
+  assert.match(page, /function repositionStuckMonster\(monster: Monster, goal: Point, elapsed: number\)/);
+  assert.match(page, /for \(const doorway of DOORWAYS\)/);
+  assert.match(page, /if \(!repositionStuckMonster\(monster, monster\.target, game\.elapsed\)\)/);
+  assert.match(page, /monster\.x = selected\.x/);
+  assert.match(page, /monster\.recoverUntil = elapsed \+ \.8/);
+  assert.match(page, /function setAutonomousRoamTarget\(game: Game\)/);
+  assert.match(page, /monster\.mode === "espreitando" && game\.elapsed >= monster\.roamChangeAt/);
+  assert.match(page, /setAutonomousRoamTarget\(game\)/);
 });
 
 test("running creates noise that attracts a nearby monster", async () => {
