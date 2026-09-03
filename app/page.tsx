@@ -102,6 +102,9 @@ const MAP_H = 1600;
 const PLAYER_RADIUS = 14;
 const PLAYER_WALK_SPEED = 130;
 const PLAYER_SPRINT_SPEED = 198;
+const MONSTER_RADIUS = 16;
+const MONSTER_PATH_CLEARANCE = 20;
+const MONSTER_RECOVERY_CLEARANCE = 24;
 const PLAYER_LIGHT_RADIUS = 245;
 const FLASHLIGHT_RANGE = 580;
 const FLASHLIGHT_HALF_ANGLE = .34;
@@ -183,7 +186,7 @@ const FURNITURE: Furniture[] = [
   { kind: "dresser", x: 1252, y: 72, w: 108, h: 54 }, { kind: "crate", x: 1655, y: 388, w: 82, h: 72 },
   { kind: "dresser", x: 1848, y: 70, w: 115, h: 52 }, { kind: "table", x: 2000, y: 350, w: 130, h: 74 },
   { kind: "stove", x: 58, y: 588, w: 86, h: 70 }, { kind: "sink", x: 158, y: 588, w: 86, h: 70 },
-  { kind: "stairs", x: 980, y: 585, w: 118, h: 285 }, { kind: "clock", x: 650, y: 850, w: 54, h: 132 },
+  { kind: "stairs", x: 980, y: 635, w: 88, h: 285 }, { kind: "clock", x: 650, y: 850, w: 54, h: 132 },
   { kind: "dresser", x: 1640, y: 590, w: 120, h: 72 }, { kind: "fireplace", x: 2268, y: 590, w: 68, h: 145 },
   { kind: "shelf", x: 72, y: 1390, w: 210, h: 52 }, { kind: "counter", x: 322, y: 1185, w: 58, h: 220 },
   { kind: "counter", x: 1000, y: 1185, w: 68, h: 220 }, { kind: "bathtub", x: 1535, y: 1190, w: 110, h: 78 },
@@ -412,18 +415,18 @@ function nearestFreeCell(col: number, row: number, cols: number, rows: number, g
         if (visited.has(key)) continue;
         visited.add(key);
         const point = { x: c * grid + grid / 2, y: r * grid + grid / 2 };
-        if (!collides(point, 18)) candidates.push({ col: c, row: r, point });
+        if (!collides(point, MONSTER_PATH_CLEARANCE)) candidates.push({ col: c, row: r, point });
       }
     }
   }
   candidates.sort((a, b) => distance(origin, a.point) - distance(origin, b.point));
-  const reachable = candidates.find((candidate) => !movementBlocked(origin, candidate.point, 16));
+  const reachable = candidates.find((candidate) => !movementBlocked(origin, candidate.point, MONSTER_RADIUS));
   const selected = reachable ?? candidates[0];
   return selected ? { col: selected.col, row: selected.row } : { col, row };
 }
 
 function findPath(start: Point, goal: Point) {
-  if (!collides(goal, 16) && !movementBlocked(start, goal, 16)) return [{ ...goal }];
+  if (!collides(goal, MONSTER_PATH_CLEARANCE) && !movementBlocked(start, goal, MONSTER_PATH_CLEARANCE)) return [{ ...goal }];
   const grid = 40;
   const cols = Math.ceil(MAP_W / grid);
   const rows = Math.ceil(MAP_H / grid);
@@ -452,7 +455,8 @@ function findPath(start: Point, goal: Point) {
       if (distance(start, startCellPoint) > 6) result.unshift(startCellPoint);
       const goalCellPoint = { x: goalCell.col * grid + grid / 2, y: goalCell.row * grid + grid / 2 };
       const lastPoint = result[result.length - 1] ?? startCellPoint;
-      const safeGoal = !collides(goal, 18) && !movementBlocked(lastPoint, goal, 16) ? goal : goalCellPoint;
+      const safeGoal = !collides(goal, MONSTER_PATH_CLEARANCE) &&
+        !movementBlocked(lastPoint, goal, MONSTER_PATH_CLEARANCE) ? goal : goalCellPoint;
       if (!result.length || distance(result[result.length - 1], safeGoal) > 4) result.push(safeGoal);
       return result;
     }
@@ -460,12 +464,14 @@ function findPath(start: Point, goal: Point) {
       const col = current.col + dx;
       const row = current.row + dy;
       if (col < 0 || row < 0 || col >= cols || row >= rows) continue;
+      const currentPoint = { x: current.col * grid + grid / 2, y: current.row * grid + grid / 2 };
       const point = { x: col * grid + grid / 2, y: row * grid + grid / 2 };
-      if (collides(point, 18)) continue;
+      if (collides(point, MONSTER_PATH_CLEARANCE)) continue;
       if (dx !== 0 && dy !== 0) {
         const sideX = { x: col * grid + grid / 2, y: current.row * grid + grid / 2 };
         const sideY = { x: current.col * grid + grid / 2, y: row * grid + grid / 2 };
-        if (collides(sideX, 18) || collides(sideY, 18)) continue;
+        if (collides(sideX, MONSTER_PATH_CLEARANCE) || collides(sideY, MONSTER_PATH_CLEARANCE) ||
+          movementBlocked(currentPoint, point, MONSTER_PATH_CLEARANCE)) continue;
       }
       const nextKey = `${col},${row}`;
       const nextCost = (cost.get(key) ?? 0) + stepCost;
@@ -497,7 +503,7 @@ function makeGame(preview = false): Game {
   const hideUses = Object.fromEntries(HIDING_SPOTS.map((spot) => [spot.id, 0]));
   const playerStart = safeSpawnPoint(preview ? { x: 1300, y: 860 } : { x: 925, y: 1450 }, PLAYER_RADIUS);
   const patrolStart = { ...PATROL_POINTS[1] };
-  const monsterStart = connectedSpawnPoint(preview ? { x: 1600, y: 860 } : { x: 880, y: 640 }, 16, patrolStart);
+  const monsterStart = connectedSpawnPoint(preview ? { x: 1600, y: 860 } : { x: 880, y: 640 }, MONSTER_RADIUS, patrolStart);
   return {
     mode: "intro", elapsed: 0, player: playerStart, aim: preview ? 0 : -Math.PI / 2,
     camera: { x: 0, y: 0 }, joystick: { x: 0, y: 0 }, keys: new Set(), flashlightOn: true, battery: INITIAL_FLASHLIGHT_BATTERY, stamina: 100,
@@ -611,7 +617,7 @@ function movementBlocked(a: Point, b: Point, radius = 18) {
 function furthestReachablePathIndex(start: Point, path: Point[], currentIndex: number) {
   const furthest = Math.min(path.length - 1, currentIndex + 6);
   for (let index = furthest; index > currentIndex; index--) {
-    if (!movementBlocked(start, path[index], 16)) return index;
+    if (!movementBlocked(start, path[index], MONSTER_PATH_CLEARANCE)) return index;
   }
   return currentIndex;
 }
@@ -625,7 +631,8 @@ function recoveryPath(start: Point, goal: Point) {
         x: clamp(start.x + Math.cos(angle) * radius, 50, MAP_W - 50),
         y: clamp(start.y + Math.sin(angle) * radius, 50, MAP_H - 50),
       };
-      if (!collides(candidate, 18) && !movementBlocked(start, candidate)) candidates.push(candidate);
+      if (!collides(candidate, MONSTER_RECOVERY_CLEARANCE) &&
+        !movementBlocked(start, candidate, MONSTER_RADIUS)) candidates.push(candidate);
     }
   }
   candidates.sort((a, b) => distance(a, goal) - distance(b, goal));
@@ -662,10 +669,10 @@ function repositionStuckMonster(monster: Monster, goal: Point, elapsed: number) 
   }
 
   const candidates = [...doorwayCandidates, ...localCandidates]
-    .filter((candidate, index, list) => !collides(candidate, 18) &&
+    .filter((candidate, index, list) => !collides(candidate, MONSTER_RECOVERY_CLEARANCE) &&
       list.findIndex((other) => distance(candidate, other) < 2) === index)
     .sort((a, b) => distance(a, goal) - distance(b, goal));
-  const directlyReachable = candidates.filter((candidate) => !movementBlocked(monster, candidate, 16));
+  const directlyReachable = candidates.filter((candidate) => !movementBlocked(monster, candidate, MONSTER_RADIUS));
   const preferred = directlyReachable.length ? directlyReachable : candidates;
   let selected: Point | null = null;
   let route: Point[] = [];
@@ -695,6 +702,36 @@ function moveWithCollision(point: Point, dx: number, dy: number, radius: number)
   if (!collides(nextX, radius)) point.x = nextX.x;
   const nextY = { x: point.x, y: point.y + dy };
   if (!collides(nextY, radius)) point.y = nextY.y;
+}
+
+function moveMonsterWithSteering(monster: Monster, waypoint: Point, step: number) {
+  const start = { x: monster.x, y: monster.y };
+  const startDistance = distance(start, waypoint);
+  const desiredAngle = Math.atan2(waypoint.y - monster.y, waypoint.x - monster.x);
+  const steeringAngles = [0, .3, -.3, .58, -.58, .86, -.86, 1.15, -1.15, Math.PI / 2, -Math.PI / 2];
+  let best: Point | null = null;
+  let bestScore = -Infinity;
+
+  for (const offset of steeringAngles) {
+    const candidate = {
+      x: monster.x + Math.cos(desiredAngle + offset) * step,
+      y: monster.y + Math.sin(desiredAngle + offset) * step,
+    };
+    if (collides(candidate, MONSTER_RADIUS)) continue;
+    const progress = startDistance - distance(candidate, waypoint);
+    const score = progress - Math.abs(offset) * step * .035;
+    if (score > bestScore) {
+      best = candidate;
+      bestScore = score;
+    }
+  }
+
+  if (best) {
+    monster.angle = Math.atan2(best.y - monster.y, best.x - monster.x);
+    monster.x = best.x;
+    monster.y = best.y;
+  }
+  return distance(start, monster);
 }
 
 export default function Home() {
@@ -1171,9 +1208,9 @@ export default function Home() {
         monster.pathIndex = furthestReachablePathIndex(monster, monster.path, monster.pathIndex);
       }
       const directCloseChase = monster.mode === "caçando" && playerDistance < 150 &&
-        !movementBlocked(monster, game.player, 16);
+        !movementBlocked(monster, game.player, MONSTER_RADIUS);
       let waypoint = directCloseChase ? game.player : monster.path[monster.pathIndex] ?? monster.target;
-      if (movementBlocked(monster, waypoint, 16)) {
+      if (movementBlocked(monster, waypoint, MONSTER_PATH_CLEARANCE)) {
         const detour = recoveryPath(monster, monster.target);
         if (detour.length) {
           monster.path = detour;
@@ -1197,11 +1234,13 @@ export default function Home() {
           : monster.mode === "investigando"
             ? MONSTER_INVESTIGATE_SPEED
             : MONSTER_PATROL_SPEED + game.elapsed * MONSTER_PATROL_ACCELERATION;
-        moveWithCollision(monster, dx / length * speed * dt, dy / length * speed * dt, 16);
+        const intendedStep = speed * dt;
+        const movedDistance = moveMonsterWithSteering(monster, waypoint, intendedStep);
         const progress = length - distance(monster, waypoint);
         const minimumProgress = Math.max(.04, speed * dt * .08);
-        monster.stuckFor = progress < minimumProgress ? monster.stuckFor + dt : Math.max(0, monster.stuckFor - dt * 2);
-        if (monster.stuckFor > .5) {
+        const blockedMovement = movedDistance < intendedStep * .35 || progress < minimumProgress;
+        monster.stuckFor = blockedMovement ? monster.stuckFor + dt : Math.max(0, monster.stuckFor - dt * 2);
+        if (monster.stuckFor > .42) {
           if (!repositionStuckMonster(monster, monster.target, game.elapsed)) {
             monster.path = recoveryPath(monster, monster.target);
             monster.pathIndex = 0;

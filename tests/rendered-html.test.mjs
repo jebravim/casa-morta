@@ -110,20 +110,30 @@ test("keeps the monster from getting trapped against walls", async () => {
   assert.match(page, /function safeSpawnPoint\(preferred: Point, radius: number\)/);
   assert.match(page, /if \(!collides\(bounded, clearance\)\) return bounded/);
   assert.match(page, /function connectedSpawnPoint\(preferred: Point, radius: number, destination: Point\)/);
-  assert.match(page, /const monsterStart = connectedSpawnPoint\(preview \? \{ x: 1600, y: 860 \} : \{ x: 880, y: 640 \}, 16, patrolStart\)/);
+  assert.match(page, /const MONSTER_RADIUS = 16/);
+  assert.match(page, /const MONSTER_PATH_CLEARANCE = 20/);
+  assert.match(page, /const MONSTER_RECOVERY_CLEARANCE = 24/);
+  assert.match(page, /const monsterStart = connectedSpawnPoint\(preview \? \{ x: 1600, y: 860 \} : \{ x: 880, y: 640 \}, MONSTER_RADIUS, patrolStart\)/);
   assert.doesNotMatch(page, /monsterStart = preview \? \{ x: 1520, y: 860 \} : \{ x: 210, y: 280 \}/);
   assert.match(page, /nearestFreeCell\([^\n]+origin: Point\)/);
-  assert.match(page, /candidates\.find\(\(candidate\) => !movementBlocked\(origin, candidate\.point, 16\)\)/);
-  assert.match(page, /if \(!collides\(goal, 16\) && !movementBlocked\(start, goal, 16\)\) return \[\{ \.\.\.goal \}\]/);
+  assert.match(page, /candidates\.find\(\(candidate\) => !movementBlocked\(origin, candidate\.point, MONSTER_RADIUS\)\)/);
+  assert.match(page, /if \(!collides\(goal, MONSTER_PATH_CLEARANCE\) && !movementBlocked\(start, goal, MONSTER_PATH_CLEARANCE\)\)/);
   assert.match(page, /monster\.path = plannedPath\.length \? plannedPath : recoveryPath\(monster, monster\.target\)/);
-  assert.match(page, /if \(movementBlocked\(monster, waypoint, 16\)\)/);
+  assert.match(page, /if \(movementBlocked\(monster, waypoint, MONSTER_PATH_CLEARANCE\)\)/);
   assert.match(page, /monster\.recoverUntil = game\.elapsed \+ 1\.35/);
   assert.match(page, /const progress = length - distance\(monster, waypoint\)/);
   assert.match(page, /const NAV_DIRECTIONS: \[number, number, number\]\[\]/);
+  assert.match(page, /movementBlocked\(currentPoint, point, MONSTER_PATH_CLEARANCE\)/);
   assert.match(page, /if \(distance\(start, startCellPoint\) > 6\) result\.unshift\(startCellPoint\)/);
   assert.match(page, /monster\.pathIndex = furthestReachablePathIndex\(monster, monster\.path, monster\.pathIndex\)/);
   assert.match(page, /if \(monster\.mode !== "caçando" && distance\(monster, monster\.target\) < 34\)/);
   assert.match(page, /const directCloseChase = monster\.mode === "caçando" && playerDistance < 150/);
+  assert.match(page, /function moveMonsterWithSteering\(monster: Monster, waypoint: Point, step: number\)/);
+  assert.match(page, /const steeringAngles = \[0, \.3, -\.3, \.58, -\.58, \.86, -\.86, 1\.15, -1\.15, Math\.PI \/ 2, -Math\.PI \/ 2\]/);
+  assert.match(page, /monster\.angle = Math\.atan2\(best\.y - monster\.y, best\.x - monster\.x\)/);
+  assert.match(page, /const movedDistance = moveMonsterWithSteering\(monster, waypoint, intendedStep\)/);
+  assert.match(page, /movedDistance < intendedStep \* \.35 \|\| progress < minimumProgress/);
+  assert.match(page, /if \(monster\.stuckFor > \.42\)/);
   assert.match(page, /function repositionStuckMonster\(monster: Monster, goal: Point, elapsed: number\)/);
   assert.match(page, /for \(const doorway of DOORWAYS\)/);
   assert.match(page, /if \(!repositionStuckMonster\(monster, monster\.target, game\.elapsed\)\)/);
@@ -196,6 +206,7 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   const pointInRect = (point, rect, padding = 0) => point.x > rect.x - padding &&
     point.x < rect.x + rect.w + padding && point.y > rect.y - padding && point.y < rect.y + rect.h + padding;
   const blocked = (point) => [...walls, ...furniture].some((rect) => pointInRect(point, rect, 18));
+  const blockedForMonster = (point) => [...walls, ...furniture].some((rect) => pointInRect(point, rect, 20));
   for (const spot of hidingSpots) {
     assert.equal(blocked(spot.check), false, `Saída do esconderijo ${spot.id} está bloqueada por um móvel ou parede`);
   }
@@ -203,7 +214,7 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
     const cells = [];
     for (let y = room.y + 20; y < room.y + room.h; y += 40) {
       for (let x = room.x + 20; x < room.x + room.w; x += 40) {
-        if (!blocked({ x, y })) cells.push({ x, y });
+        if (!blockedForMonster({ x, y })) cells.push({ x, y });
       }
     }
     const cellKeys = new Set(cells.map((cell) => `${cell.x},${cell.y}`));
@@ -235,4 +246,5 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   assert.match(page, /\{ id: "bed-bedroom"[^\n]+x: 245, y: 82, w: 205, h: 104/);
   assert.match(page, /\{ kind: "piano", x: 70, y: 390, w: 190, h: 65 \}/);
   assert.match(page, /\{ id: "storage-crates"[^\n]+check: \{ x: 450, y: 1275 \}/);
+  assert.match(page, /\{ kind: "stairs", x: 980, y: 635, w: 88, h: 285 \}/);
 });
