@@ -158,7 +158,7 @@ const HIDING_SPOTS: HidingSpot[] = [
   { id: "kitchen-pantry", label: "despensa estreita", kind: "armário", x: 72, y: 740, w: 92, h: 130, check: { x: 195, y: 805 } },
   { id: "hall-curtain", label: "cortina do hall", kind: "cortina", x: 650, y: 575, w: 74, h: 130, check: { x: 755, y: 640 } },
   { id: "office-desk", label: "embaixo da escrivaninha", kind: "cama", x: 2010, y: 745, w: 162, h: 82, check: { x: 2090, y: 870 } },
-  { id: "storage-crates", label: "atrás das caixas", kind: "armário", x: 390, y: 1320, w: 120, h: 112, check: { x: 350, y: 1375 } },
+  { id: "storage-crates", label: "atrás das caixas", kind: "armário", x: 390, y: 1320, w: 120, h: 112, check: { x: 450, y: 1275 } },
   { id: "basement-locker", label: "armário do porão", kind: "armário", x: 668, y: 1370, w: 80, h: 126, check: { x: 780, y: 1435 } },
   { id: "laundry-sheet", label: "lençóis pendurados", kind: "cortina", x: 1670, y: 1320, w: 78, h: 140, check: { x: 1635, y: 1390 } },
   { id: "sealed-wardrobe", label: "confessionário", kind: "armário", x: 2250, y: 1120, w: 74, h: 128, check: { x: 2210, y: 1185 } },
@@ -321,6 +321,10 @@ function safeSpawnPoint(preferred: Point, radius: number) {
     }
   }
   return bounded;
+}
+
+function safeHidingPosition(spot: HidingSpot) {
+  return safeSpawnPoint(spot.check, PLAYER_RADIUS);
 }
 
 function lineBlocked(a: Point, b: Point) {
@@ -859,8 +863,9 @@ export default function Home() {
     game.hideRemaining = 8;
     game.flashlightOn = false;
     game.hideUses[spot.id] += 1;
-    game.player.x = spot.check.x;
-    game.player.y = spot.check.y;
+    const hidingPosition = safeHidingPosition(spot);
+    game.player.x = hidingPosition.x;
+    game.player.y = hidingPosition.y;
     const uses = game.hideUses[spot.id];
     message(game, uses > 1 ? "ELA SE LEMBRA DESTE LUGAR — SEGURE ESPAÇO" : "SEGURE ESPAÇO PARA PRENDER A RESPIRAÇÃO");
     tone(game, 92, .45, .04, "triangle");

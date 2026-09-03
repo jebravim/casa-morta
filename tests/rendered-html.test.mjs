@@ -64,6 +64,10 @@ test("shows and implements the hold-breath control", async () => {
   assert.match(page, /HELD_BREATH_DRAIN = 1/);
   assert.match(page, /RELEASED_BREATH_DRAIN = 2\.4/);
   assert.match(page, /className="breath-button"/);
+  assert.match(page, /function safeHidingPosition\(spot: HidingSpot\)/);
+  assert.match(page, /const hidingPosition = safeHidingPosition\(spot\)/);
+  assert.match(page, /game\.player\.x = hidingPosition\.x/);
+  assert.match(page, /game\.player\.y = hidingPosition\.y/);
 });
 
 test("flashlight beam alerts the monster to the player", async () => {
@@ -192,6 +196,9 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   const pointInRect = (point, rect, padding = 0) => point.x > rect.x - padding &&
     point.x < rect.x + rect.w + padding && point.y > rect.y - padding && point.y < rect.y + rect.h + padding;
   const blocked = (point) => [...walls, ...furniture].some((rect) => pointInRect(point, rect, 18));
+  for (const spot of hidingSpots) {
+    assert.equal(blocked(spot.check), false, `Saída do esconderijo ${spot.id} está bloqueada por um móvel ou parede`);
+  }
   for (const room of rooms) {
     const cells = [];
     for (let y = room.y + 20; y < room.y + room.h; y += 40) {
@@ -227,4 +234,5 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   assert.match(page, /\{ x: 1415, y: 645, w: 40, h: 40, angle: 0 \}/);
   assert.match(page, /\{ id: "bed-bedroom"[^\n]+x: 245, y: 82, w: 205, h: 104/);
   assert.match(page, /\{ kind: "piano", x: 70, y: 390, w: 190, h: 65 \}/);
+  assert.match(page, /\{ id: "storage-crates"[^\n]+check: \{ x: 450, y: 1275 \}/);
 });
