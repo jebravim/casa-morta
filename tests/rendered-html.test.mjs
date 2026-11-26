@@ -29,8 +29,9 @@ test("server-renders Casa Morta with account access", async () => {
 });
 
 test("ships an installable Casa Morta PWA", async () => {
-  const [layout, page, manifestText, serviceWorker, icon192, icon512, appleIcon] = await Promise.all([
+  const [layout, renderHtml, page, manifestText, serviceWorker, icon192, icon512, appleIcon] = await Promise.all([
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../render/index.html", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../public/manifest.json", import.meta.url), "utf8"),
     readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
@@ -46,6 +47,9 @@ test("ships an installable Casa Morta PWA", async () => {
   assert.ok(manifest.icons.some((icon) => icon.sizes === "512x512" && icon.purpose === "maskable"));
   assert.match(layout, /manifest: "\/manifest\.json"/);
   assert.match(layout, /appleWebApp:/);
+  assert.match(renderHtml, /rel="manifest" href="\/manifest\.json"/);
+  assert.match(renderHtml, /rel="apple-touch-icon"/);
+  assert.match(renderHtml, /apple-mobile-web-app-capable/);
   assert.match(page, /navigator\.serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(page, /beforeinstallprompt/);
   assert.match(page, /INSTALAR JOGO/);
