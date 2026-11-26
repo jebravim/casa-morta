@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
@@ -26,6 +26,34 @@ test("server-renders Casa Morta with account access", async () => {
   assert.match(html, /ENTRAR PARA SALVAR DESEMPENHO/);
   assert.match(html, /class="account-trigger"/);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site/);
+});
+
+test("ships an installable Casa Morta PWA", async () => {
+  const [layout, page, manifestText, serviceWorker, icon192, icon512, appleIcon] = await Promise.all([
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+    stat(new URL("../public/pwa-icon-192.png", import.meta.url)),
+    stat(new URL("../public/pwa-icon-512.png", import.meta.url)),
+    stat(new URL("../public/apple-touch-icon.png", import.meta.url)),
+  ]);
+  const manifest = JSON.parse(manifestText);
+
+  assert.equal(manifest.name, "Casa Morta");
+  assert.equal(manifest.display, "standalone");
+  assert.equal(manifest.start_url, "/?origem=pwa");
+  assert.ok(manifest.icons.some((icon) => icon.sizes === "512x512" && icon.purpose === "maskable"));
+  assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
+  assert.match(layout, /appleWebApp:/);
+  assert.match(page, /navigator\.serviceWorker\.register\("\/sw\.js"\)/);
+  assert.match(page, /beforeinstallprompt/);
+  assert.match(page, /INSTALAR JOGO/);
+  assert.match(serviceWorker, /const CACHE_NAME = "casa-morta-v1"/);
+  assert.match(serviceWorker, /request\.mode === "navigate"/);
+  assert.ok(icon192.size > 10_000);
+  assert.ok(icon512.size > 50_000);
+  assert.ok(appleIcon.size > 10_000);
 });
 
 test("connects authenticated players to protected session history", async () => {

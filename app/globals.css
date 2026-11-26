@@ -123,6 +123,8 @@ canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; 
 .intro-card button span, .result-card button span { margin-left: 35px; }
 .intro-card .account-cta, .result-card .account-cta { display: block; margin: -10px 0 20px; padding: 3px 0; border: 0; color: #91977a; background: transparent; box-shadow: none; font-size: 8px; text-decoration: underline; text-underline-offset: 4px; }
 .intro-card .account-cta:hover, .result-card .account-cta:hover { color: #cbd29f; background: transparent; box-shadow: none; transform: none; }
+.intro-card .pwa-install-button { margin: -9px 0 18px; padding: 9px 12px; border-color: #62694d; color: #cbd29f; background: #151a12; box-shadow: 3px 3px 0 #050705; font-size: 9px; }
+.intro-card .pwa-install-button:hover { border-color: #949f66; color: #f0f3bd; background: #212719; box-shadow: 4px 4px 0 #050705; }
 .keys { display: flex; gap: 12px; color: #646858; font-size: 8px; flex-wrap: wrap; }
 kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9ac96; background: #171a15; box-shadow: 0 2px 0 #000; font: inherit; }
 .rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 15px; border: 1px solid #39342a; background: #39342a; }

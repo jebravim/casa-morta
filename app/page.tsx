@@ -9,6 +9,10 @@ type Rect = Point & { w: number; h: number };
 type Mode = "intro" | "running" | "paused" | "won" | "lost";
 type MonsterMode = "espreitando" | "investigando" | "caçando" | "procurando";
 type AccountView = "signin" | "signup" | "history";
+type InstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
+};
 
 type HidingSpot = Rect & {
   id: string;
@@ -765,9 +769,27 @@ export default function Home() {
   const [history, setHistory] = useState<GameSessionRecord[]>([]);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [joystickActive, setJoystickActive] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
 
   useEffect(() => {
     if (gameRef.current === null) gameRef.current = makeGame(true);
+  }, []);
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    }
+    const handleInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as InstallPromptEvent);
+    };
+    const handleInstalled = () => setInstallPrompt(null);
+    window.addEventListener("beforeinstallprompt", handleInstallPrompt);
+    window.addEventListener("appinstalled", handleInstalled);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
+      window.removeEventListener("appinstalled", handleInstalled);
+    };
   }, []);
 
   useEffect(() => {
@@ -955,6 +977,13 @@ export default function Home() {
     setJoystickActive(false);
     setMode("running");
   }, []);
+
+  const installPwa = useCallback(async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+  }, [installPrompt]);
 
   const togglePause = useCallback(() => {
     const game = gameRef.current;
@@ -1932,6 +1961,7 @@ export default function Home() {
           <div className="rules"><span><b>8s</b> limite escondido</span><span><b>14s</b> para recuperar o fôlego</span><span><b>12</b> cargas espalhadas</span></div>
           <button type="button" onClick={startGame}>ENTRAR NA CASA <span>→</span></button>
           <button className="account-cta" type="button" onClick={openAccount}>{user ? "VER MEU HISTÓRICO" : "ENTRAR PARA SALVAR DESEMPENHO"}</button>
+          {installPrompt && <button className="pwa-install-button" type="button" onClick={installPwa}>INSTALAR JOGO</button>}
           <div className="keys"><span><kbd>WASD</kbd> MOVER</span><span><kbd>SHIFT</kbd> CORRER (FAZ BARULHO)</span><span><kbd>MOUSE</kbd> MIRAR</span><span><kbd>F</kbd> LUZ</span><span><kbd>E</kbd> ESCONDER</span><span><kbd>ESPAÇO</kbd> FÔLEGO</span><span><kbd>ESC</kbd> PAUSAR</span></div>
           <div className="mobile-tip">JOYSTICK PARA MOVER · SEGURE CORRER · USE AGIR PERTO DOS ESCONDERIJOS</div>
         </div>}
