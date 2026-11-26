@@ -111,8 +111,8 @@ test("keeps the monster from getting trapped against walls", async () => {
   assert.match(page, /if \(!collides\(bounded, clearance\)\) return bounded/);
   assert.match(page, /function connectedSpawnPoint\(preferred: Point, radius: number, destination: Point\)/);
   assert.match(page, /const MONSTER_RADIUS = 16/);
-  assert.match(page, /const MONSTER_PATH_CLEARANCE = 20/);
-  assert.match(page, /const MONSTER_RECOVERY_CLEARANCE = 24/);
+  assert.match(page, /const MONSTER_PATH_CLEARANCE = 18/);
+  assert.match(page, /const MONSTER_RECOVERY_CLEARANCE = 22/);
   assert.match(page, /const monsterStart = connectedSpawnPoint\(preview \? \{ x: 1600, y: 860 \} : \{ x: 880, y: 640 \}, MONSTER_RADIUS, patrolStart\)/);
   assert.doesNotMatch(page, /monsterStart = preview \? \{ x: 1520, y: 860 \} : \{ x: 210, y: 280 \}/);
   assert.match(page, /nearestFreeCell\([^\n]+origin: Point\)/);
@@ -136,12 +136,17 @@ test("keeps the monster from getting trapped against walls", async () => {
   assert.match(page, /if \(monster\.stuckFor > \.42\)/);
   assert.match(page, /function repositionStuckMonster\(monster: Monster, goal: Point, elapsed: number\)/);
   assert.match(page, /for \(const doorway of DOORWAYS\)/);
+  assert.match(page, /for \(const radius of \[32, 52, 76, 104, 136\]\)/);
   assert.match(page, /if \(!repositionStuckMonster\(monster, monster\.target, game\.elapsed\)\)/);
   assert.match(page, /monster\.x = selected\.x/);
+  assert.match(page, /monster\.stuckAnchor = \{ x: monster\.x, y: monster\.y \}/);
+  assert.match(page, /const netMovement = distance\(monster, monster\.stuckAnchor\)/);
+  assert.match(page, /game\.elapsed - monster\.stuckCheckedAt > \.72/);
   assert.match(page, /monster\.recoverUntil = elapsed \+ \.8/);
   assert.match(page, /function setAutonomousRoamTarget\(game: Game\)/);
   assert.match(page, /monster\.mode === "espreitando" && game\.elapsed >= monster\.roamChangeAt/);
   assert.match(page, /setAutonomousRoamTarget\(game\)/);
+  assert.match(page, /const grid = 32/);
 });
 
 test("running creates noise that attracts a nearby monster", async () => {
@@ -265,4 +270,5 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   assert.match(page, /\{ kind: "piano", x: 70, y: 390, w: 190, h: 65 \}/);
   assert.match(page, /\{ id: "storage-crates"[^\n]+check: \{ x: 450, y: 1275 \}/);
   assert.match(page, /\{ kind: "stairs", x: 980, y: 635, w: 88, h: 285 \}/);
+  assert.match(page, /\{ kind: "table", x: 830, y: 205, w: 170, h: 92 \}/);
 });

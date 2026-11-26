@@ -40,6 +40,8 @@ type Monster = Point & {
   searchUntil: number;
   hearingUntil: number;
   stuckFor: number;
+  stuckAnchor: Point;
+  stuckCheckedAt: number;
   recoverUntil: number;
   roamChangeAt: number;
   lastCheckedSpot: string | null;
@@ -103,8 +105,8 @@ const PLAYER_RADIUS = 14;
 const PLAYER_WALK_SPEED = 130;
 const PLAYER_SPRINT_SPEED = 198;
 const MONSTER_RADIUS = 16;
-const MONSTER_PATH_CLEARANCE = 20;
-const MONSTER_RECOVERY_CLEARANCE = 24;
+const MONSTER_PATH_CLEARANCE = 18;
+const MONSTER_RECOVERY_CLEARANCE = 22;
 const PLAYER_LIGHT_RADIUS = 245;
 const FLASHLIGHT_RANGE = 580;
 const FLASHLIGHT_HALF_ANGLE = .34;
@@ -171,7 +173,7 @@ const FURNITURE: Furniture[] = [
   ...HIDING_SPOTS.map((spot) => ({ ...spot, kind: spot.kind === "cama" ? "bed" as const : "wardrobe" as const })),
   { kind: "piano", x: 70, y: 390, w: 190, h: 65 },
   { kind: "shelf", x: 680, y: 78, w: 230, h: 52 }, { kind: "shelf", x: 680, y: 365, w: 210, h: 52 },
-  { kind: "table", x: 830, y: 225, w: 170, h: 92 }, { kind: "crate", x: 1640, y: 86, w: 92, h: 92 },
+  { kind: "table", x: 830, y: 205, w: 170, h: 92 }, { kind: "crate", x: 1640, y: 86, w: 92, h: 92 },
   { kind: "table", x: 1945, y: 170, w: 185, h: 92 }, { kind: "crate", x: 2155, y: 100, w: 72, h: 72 },
   { kind: "counter", x: 260, y: 650, w: 250, h: 62 }, { kind: "counter", x: 440, y: 720, w: 70, h: 230 },
   { kind: "table", x: 220, y: 820, w: 170, h: 98 }, { kind: "sofa", x: 820, y: 720, w: 76, h: 210 },
@@ -429,7 +431,7 @@ function nearestFreeCell(col: number, row: number, cols: number, rows: number, g
 
 function findPath(start: Point, goal: Point) {
   if (!collides(goal, MONSTER_PATH_CLEARANCE) && !movementBlocked(start, goal, MONSTER_PATH_CLEARANCE)) return [{ ...goal }];
-  const grid = 40;
+  const grid = 32;
   const cols = Math.ceil(MAP_W / grid);
   const rows = Math.ceil(MAP_H / grid);
   const startCell = nearestFreeCell(Math.floor(start.x / grid), Math.floor(start.y / grid), cols, rows, grid, start);
@@ -517,7 +519,8 @@ function makeGame(preview = false): Game {
     monster: {
       ...monsterStart, mode: "espreitando", angle: preview ? Math.PI : 0, target: patrolStart,
       lastSeen: { ...playerStart }, patrolIndex: 1, path: [], pathIndex: 0, repathIn: 0, searchUntil: 0,
-      hearingUntil: 0, stuckFor: 0, recoverUntil: 0, roamChangeAt: 5, lastCheckedSpot: null,
+      hearingUntil: 0, stuckFor: 0, stuckAnchor: { ...monsterStart }, stuckCheckedAt: 0,
+      recoverUntil: 0, roamChangeAt: 5, lastCheckedSpot: null,
     },
   };
 }
@@ -626,7 +629,7 @@ function furthestReachablePathIndex(start: Point, path: Point[], currentIndex: n
 
 function recoveryPath(start: Point, goal: Point) {
   const candidates: Point[] = [];
-  for (const radius of [48, 80, 112]) {
+  for (const radius of [48, 80, 112, 144]) {
     for (let index = 0; index < 16; index++) {
       const angle = index / 16 * Math.PI * 2;
       const candidate = {
@@ -660,7 +663,7 @@ function repositionStuckMonster(monster: Monster, goal: Point, elapsed: number) 
   }
 
   const localCandidates: Point[] = [];
-  for (const radius of [32, 52, 76]) {
+  for (const radius of [32, 52, 76, 104, 136]) {
     for (let index = 0; index < 16; index++) {
       const angle = index / 16 * Math.PI * 2;
       localCandidates.push({
@@ -694,6 +697,8 @@ function repositionStuckMonster(monster: Monster, goal: Point, elapsed: number) 
   monster.path = route.length ? route : recoveryPath(monster, goal);
   monster.pathIndex = 0;
   monster.stuckFor = 0;
+  monster.stuckAnchor = { x: monster.x, y: monster.y };
+  monster.stuckCheckedAt = elapsed;
   monster.recoverUntil = elapsed + .8;
   monster.repathIn = .8;
   return true;
@@ -1250,6 +1255,21 @@ export default function Home() {
             monster.repathIn = 1.35;
             monster.stuckFor = 0;
           }
+        }
+      }
+
+      const netMovement = distance(monster, monster.stuckAnchor);
+      if (netMovement > 24 || distance(monster, monster.target) < 34) {
+        monster.stuckAnchor = { x: monster.x, y: monster.y };
+        monster.stuckCheckedAt = game.elapsed;
+      } else if (game.elapsed - monster.stuckCheckedAt > .72 && game.elapsed >= monster.recoverUntil) {
+        if (!repositionStuckMonster(monster, monster.target, game.elapsed)) {
+          monster.path = recoveryPath(monster, monster.target);
+          monster.pathIndex = 0;
+          monster.repathIn = 0;
+          monster.stuckFor = 0;
+          monster.stuckAnchor = { x: monster.x, y: monster.y };
+          monster.stuckCheckedAt = game.elapsed;
         }
       }
 
