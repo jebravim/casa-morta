@@ -9,12 +9,13 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; background: var(--void); color: var(--ink); }
-body { font-family: var(--font-geist-mono), Consolas, monospace; overflow: hidden; }
+html, body { margin: 0; min-height: 100%; background: var(--void); color: var(--ink); overscroll-behavior: none; }
+body { font-family: var(--font-geist-mono), Consolas, monospace; overflow: hidden; touch-action: none; }
 button { font: inherit; }
 
 .game-shell {
   height: 100vh;
+  height: 100dvh;
   display: grid;
   grid-template-rows: 64px 1fr;
   background: #050605;
@@ -86,7 +87,7 @@ button { font: inherit; }
   mix-blend-mode: multiply;
 }
 
-canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; cursor: crosshair; }
+canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; cursor: crosshair; touch-action: none; }
 
 .overlay-card, .result-card {
   position: absolute;
@@ -232,12 +233,13 @@ kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9
 .interaction-prompt { position: absolute; z-index: 6; left: 50%; bottom: 130px; transform: translateX(-50%); padding: 9px 14px; color: #c5c9a4; background: #111510e8; border: 1px solid #62694d; font-size: 9px; letter-spacing: .08em; white-space: nowrap; }
 
 .mobile-controls { display: none; }
+.mobile-tip { display: none; }
 
 @keyframes dangerText { 50% { opacity: .62; } }
 @keyframes pulseBorder { 50% { border-color: #d64a3e; } }
 @keyframes reveal { from { opacity: 0; transform: translate(-50%, -4px); } }
 
-@media (max-width: 800px) {
+@media (max-width: 960px), (hover: none) and (pointer: coarse) {
   .game-shell { grid-template-rows: 58px 1fr; }
   .topbar { padding: 0 9px; grid-template-columns: 1fr auto auto; gap: 7px; }
   .brand { font-size: 11px; }
@@ -255,11 +257,11 @@ kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9
   .rules { grid-template-columns: 1fr 1fr 1fr; }
   .keys { display: none; }
   .objective, .stamina, .room-tag { display: none; }
-  .memory-panel { top: 10px; right: 10px; width: 155px; }
-  .noise-clock { top: 84px; right: 10px; }
-  .charge { right: 10px; bottom: 76px; width: 145px; }
-  .interaction-prompt { bottom: 124px; font-size: 8px; max-width: 85%; white-space: normal; text-align: center; }
-  .breath-meter { bottom: 126px; width: 210px; }
+  .memory-panel { top: 10px; right: max(10px, env(safe-area-inset-right)); width: 145px; padding: 8px 10px; }
+  .noise-clock { top: 76px; right: max(10px, env(safe-area-inset-right)); min-width: 112px; padding: 7px 9px; }
+  .charge { top: 10px; right: auto; bottom: auto; left: max(10px, env(safe-area-inset-left)); width: 132px; padding: 8px 10px; }
+  .interaction-prompt { bottom: calc(144px + env(safe-area-inset-bottom)); font-size: 8px; max-width: 72%; white-space: normal; text-align: center; }
+  .breath-meter { bottom: calc(142px + env(safe-area-inset-bottom)); width: min(230px, 58vw); }
   .game-message { top: 16%; width: 84%; font-size: 9px; }
   .account-overlay { padding: 8px; }
   .account-card { max-height: calc(100vh - 76px); padding: 24px 18px; }
@@ -267,21 +269,45 @@ kbd { padding: 3px 5px; margin-right: 4px; border: 1px solid #555949; color: #a9
   .account-summary { grid-template-columns: 1fr 1fr; }
   .account-summary span:last-child { grid-column: 1 / -1; }
   .history-row dl { grid-template-columns: repeat(2, 1fr); }
-  .mobile-controls { display: flex; position: absolute; z-index: 7; inset: auto 10px 10px 10px; align-items: end; justify-content: space-between; pointer-events: none; }
-  .mobile-controls button { pointer-events: auto; touch-action: none; border: 1px solid #6b705b; background: #111510bb; color: #b9bea0; font-size: 12px; width: 46px; height: 42px; }
-  .digital-joystick { position: relative; width: 108px; height: 108px; flex: 0 0 108px; border: 2px solid #626850; border-radius: 50%; pointer-events: auto; touch-action: none; background: radial-gradient(circle, #252b22b8 0 23%, #111510c9 24% 58%, #080b08d9 59%); box-shadow: inset 0 0 20px #000b, 0 8px 24px #0009; }
+  .mobile-tip { display: block; max-width: 360px; margin-top: 4px; color: #777c68; font-size: 8px; line-height: 1.5; }
+  .mobile-controls { display: flex; position: absolute; z-index: 9; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); left: max(12px, env(safe-area-inset-left)); align-items: end; justify-content: space-between; pointer-events: none; }
+  .mobile-controls button { pointer-events: auto; touch-action: none; -webkit-tap-highlight-color: transparent; border: 1px solid #6b705b; color: #d0d4b5; background: #111510e8; box-shadow: 0 6px 16px #000b, inset 0 0 10px #0006; font-weight: 800; letter-spacing: .07em; }
+  .digital-joystick { position: relative; width: clamp(108px, 28vw, 126px); height: clamp(108px, 28vw, 126px); flex: 0 0 clamp(108px, 28vw, 126px); border: 2px solid #626850; border-radius: 50%; pointer-events: auto; touch-action: none; -webkit-tap-highlight-color: transparent; background: radial-gradient(circle, #252b22d9 0 23%, #111510e8 24% 58%, #080b08ed 59%); box-shadow: inset 0 0 20px #000b, 0 8px 24px #0009; }
   .joystick-guide { position: absolute; inset: 13px; border: 1px dashed #525843a8; border-radius: 50%; pointer-events: none; }
   .joystick-guide::before, .joystick-guide::after { content: ""; position: absolute; left: 50%; top: 50%; background: #5c624c55; transform: translate(-50%, -50%); }
   .joystick-guide::before { width: 72px; height: 1px; }
   .joystick-guide::after { width: 1px; height: 72px; }
-  .joystick-knob { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; border: 2px solid #858c68; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 38% 32%, #59604a, #252b22 70%); box-shadow: 0 5px 12px #000c, inset 0 0 8px #a7ad7a33; transition: transform .06s linear; }
+  .joystick-knob { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; border: 2px solid #858c68; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 38% 32%, #59604a, #252b22 70%); box-shadow: 0 5px 12px #000c, inset 0 0 8px #a7ad7a33; transform: translate(calc(-50% + var(--stick-x, 0px)), calc(-50% + var(--stick-y, 0px))); transition: transform .06s linear; will-change: transform; }
   .digital-joystick.active { border-color: #8e966e; box-shadow: inset 0 0 22px #000b, 0 0 18px #89945d33; }
   .digital-joystick.active .joystick-knob { border-color: #b5bd83; transition: none; }
-  .action-buttons { display: flex; align-items: end; gap: 7px; }
-  .action-buttons button { border-radius: 50%; width: 52px; height: 52px; font-size: 9px; }
-  .action-buttons .breath-button { width: 62px; border-radius: 8px; border-color: #8b433b; color: #ead5bc; background: #3a1916d9; font-size: 8px; }
+  .action-buttons { display: grid; grid-template-columns: 54px 70px; grid-template-rows: 54px 70px; align-items: center; justify-items: center; gap: 4px 6px; pointer-events: none; }
+  .action-buttons button { border-radius: 50%; width: 52px; height: 52px; font-size: 8px; }
+  .action-buttons button:active { transform: scale(.93); filter: brightness(1.3); }
+  .light-button { grid-area: 1 / 1; }
+  .light-button.active { border-color: #bec778; color: #f1f2b5; box-shadow: 0 0 14px #c6d46655, inset 0 0 12px #a9b95b2e; }
+  .sprint-button { grid-area: 2 / 1; width: 60px !important; height: 60px !important; border-color: #7d7651 !important; color: #d9d0a5 !important; background: #292515e8 !important; }
+  .interact-button { grid-area: 1 / 2 / 3; width: 70px !important; height: 70px !important; border-color: #a64b42 !important; color: #f2ded0 !important; background: #702923e8 !important; font-size: 10px !important; }
+  .action-buttons.hidden-actions { grid-template-columns: 76px 70px; grid-template-rows: 76px; gap: 9px; }
+  .action-buttons .breath-button { grid-area: 1 / 1; width: 76px; height: 76px; border-radius: 50%; border-color: #8b433b; color: #ead5bc; background: #3a1916ed; font-size: 8px; }
   .action-buttons .breath-button:active { background: #7a3029; }
-  .action-buttons button:last-child { background: #702923c9; border-color: #a64b42; font-size: 16px; }
+  .hidden-actions .interact-button { grid-area: 1 / 2; }
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .game-shell { grid-template-rows: 48px 1fr; }
+  .topbar { padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right)); }
+  .brand-mark { font-size: 11px; }
+  .timer { min-width: 94px; padding: 4px 8px; font-size: 14px; }
+  .memory-panel { display: none; }
+  .noise-clock { top: 8px; }
+  .charge { top: 8px; }
+  .mobile-controls { bottom: max(7px, env(safe-area-inset-bottom)); }
+  .digital-joystick { width: 96px; height: 96px; flex-basis: 96px; }
+  .joystick-guide { inset: 11px; }
+  .action-buttons { transform: scale(.9); transform-origin: right bottom; }
+  .interaction-prompt { bottom: calc(110px + env(safe-area-inset-bottom)); }
+  .breath-meter { bottom: calc(106px + env(safe-area-inset-bottom)); }
+  .game-message { top: 12%; }
 }
 
 @media (max-height: 640px) {

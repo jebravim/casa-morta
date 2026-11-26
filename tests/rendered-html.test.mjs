@@ -96,12 +96,24 @@ test("uses an analog digital joystick on mobile", async () => {
   ]);
 
   assert.match(page, /joystick: Point/);
-  assert.match(page, /game\.joystick = \{ x: x \/ maxTravel, y: y \/ maxTravel \}/);
+  assert.match(page, /const deadzone = maxTravel \* \.12/);
+  assert.match(page, /game\.joystick = \{ x: directionX \* response, y: directionY \* response \}/);
+  assert.match(page, /control\.style\.setProperty\("--stick-x"/);
   assert.match(page, /className=\{`digital-joystick/);
   assert.match(page, /onPointerMove=\{moveJoystick\}/);
+  assert.match(page, /className="sprint-button"/);
+  assert.match(page, /startTouchKey\(event, "shift"\)/);
+  assert.match(page, /window\.addEventListener\("blur", releaseTouchControls\)/);
+  assert.match(page, /hud\.hidden \? "SAIR" : "AGIR"/);
   assert.doesNotMatch(page, /className="dpad"/);
   assert.match(styles, /\.digital-joystick/);
   assert.match(styles, /\.joystick-knob/);
+  assert.match(styles, /height: 100dvh/);
+  assert.match(styles, /env\(safe-area-inset-bottom\)/);
+  assert.match(styles, /@media \(max-width: 960px\), \(hover: none\) and \(pointer: coarse\)/);
+  assert.match(styles, /\.action-buttons \{ display: grid/);
+  assert.match(styles, /will-change: transform/);
+  assert.match(page, /Math\.min\(window\.matchMedia\("\(pointer: coarse\)"\)\.matches \? 1\.5 : 2/);
 });
 
 test("keeps the monster from getting trapped against walls", async () => {
@@ -178,8 +190,8 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   assert.match(page, /const COLLISION_OBSTACLES: Rect\[\] = \[\.\.\.FURNITURE, \.\.\.CHAIR_COLLIDERS\]/);
   assert.match(page, /return COLLISION_OBSTACLES\.some\(\(rect\) => pointIn\(point, rect, radius\)\)/);
   assert.match(page, /const LIGHT_BLOCKERS: Rect\[\] = \[\.\.\.WALLS, \.\.\.FURNITURE, \.\.\.CHAIRS\]/);
-  assert.match(styles, /\.charge \{ right: 10px; bottom: 76px; width: 145px; \}/);
-  assert.match(styles, /\.breath-meter \{ bottom: 126px; width: 210px; \}/);
+  assert.match(styles, /\.charge \{ top: 10px; right: auto; bottom: auto;/);
+  assert.match(styles, /\.breath-meter \{ bottom: calc\(142px \+ env\(safe-area-inset-bottom\)\);/);
 
   const extractArray = (pattern) => {
     const match = page.match(pattern);

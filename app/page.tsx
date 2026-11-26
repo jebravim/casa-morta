@@ -97,6 +97,7 @@ type Hud = {
   message: string;
   memory: number;
   collected: number;
+  flashlightOn: boolean;
 };
 
 const MAP_W = 2400;
@@ -528,6 +529,7 @@ function makeGame(preview = false): Game {
 const initialHud: Hud = {
   remaining: 150, battery: INITIAL_FLASHLIGHT_BATTERY, stamina: 100, room: "PORÃO", monster: "espreitando",
   noiseIn: 20, hidden: false, holdingBreath: false, hideRemaining: 8, cooldown: 0, prompt: "", message: "", memory: 0, collected: 0,
+  flashlightOn: true,
 };
 
 function formatTime(seconds: number) {
@@ -762,10 +764,31 @@ export default function Home() {
   const [playerName, setPlayerName] = useState("");
   const [history, setHistory] = useState<GameSessionRecord[]>([]);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [joystickVisual, setJoystickVisual] = useState({ x: 0, y: 0, active: false });
+  const [joystickActive, setJoystickActive] = useState(false);
 
   useEffect(() => {
     if (gameRef.current === null) gameRef.current = makeGame(true);
+  }, []);
+
+  useEffect(() => {
+    const releaseTouchControls = () => {
+      const game = gameRef.current;
+      if (game) {
+        game.joystick = { x: 0, y: 0 };
+        game.keys.delete("shift");
+        game.keys.delete("space");
+      }
+      joystickRef.current?.style.setProperty("--stick-x", "0px");
+      joystickRef.current?.style.setProperty("--stick-y", "0px");
+      setJoystickActive(false);
+    };
+    const handleVisibility = () => { if (document.hidden) releaseTouchControls(); };
+    window.addEventListener("blur", releaseTouchControls);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("blur", releaseTouchControls);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   const loadHistory = useCallback(async () => {
@@ -927,7 +950,9 @@ export default function Home() {
     gameRef.current = fresh;
     setHud(initialHud);
     setSaveState("idle");
-    setJoystickVisual({ x: 0, y: 0, active: false });
+    joystickRef.current?.style.setProperty("--stick-x", "0px");
+    joystickRef.current?.style.setProperty("--stick-y", "0px");
+    setJoystickActive(false);
     setMode("running");
   }, []);
 
@@ -938,7 +963,9 @@ export default function Home() {
       game.mode = "paused";
       game.keys.clear();
       game.joystick = { x: 0, y: 0 };
-      setJoystickVisual({ x: 0, y: 0, active: false });
+      joystickRef.current?.style.setProperty("--stick-x", "0px");
+      joystickRef.current?.style.setProperty("--stick-y", "0px");
+      setJoystickActive(false);
       void game.audio?.suspend().catch(() => undefined);
       setMode("paused");
       return;
@@ -961,7 +988,9 @@ export default function Home() {
     gameRef.current = makeGame(true);
     setHud(initialHud);
     setSaveState("idle");
-    setJoystickVisual({ x: 0, y: 0, active: false });
+    joystickRef.current?.style.setProperty("--stick-x", "0px");
+    joystickRef.current?.style.setProperty("--stick-y", "0px");
+    setJoystickActive(false);
     setMode("intro");
   }, []);
 
@@ -981,7 +1010,7 @@ export default function Home() {
 
     const resize = () => {
       const bounds = canvas.getBoundingClientRect();
-      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      const ratio = Math.min(window.matchMedia("(pointer: coarse)").matches ? 1.5 : 2, window.devicePixelRatio || 1);
       canvas.width = Math.max(1, Math.round(bounds.width * ratio));
       canvas.height = Math.max(1, Math.round(bounds.height * ratio));
       darknessLayer.width = canvas.width;
@@ -1029,7 +1058,9 @@ export default function Home() {
       game.mode = result;
       game.keys.clear();
       game.joystick = { x: 0, y: 0 };
-      setJoystickVisual({ x: 0, y: 0, active: false });
+      joystickRef.current?.style.setProperty("--stick-x", "0px");
+      joystickRef.current?.style.setProperty("--stick-y", "0px");
+      setJoystickActive(false);
       setMode(result);
       saveGameSessionRef.current(game, result);
       tone(game, result === "won" ? 420 : 46, result === "won" ? 1.2 : 1.8, .075, result === "won" ? "sine" : "sawtooth");
@@ -1302,7 +1333,7 @@ export default function Home() {
           remaining: 150 - game.elapsed, battery: game.battery, stamina: game.stamina,
           room: currentRoom(game.player).name, monster: monster.mode, noiseIn: 20 - (game.elapsed % 20),
           hidden: Boolean(game.hiddenSpot), holdingBreath: game.keys.has("space"), hideRemaining: game.hideRemaining, cooldown: game.hideCooldown,
-          prompt, message: game.message, memory, collected: game.collected,
+          prompt, message: game.message, memory, collected: game.collected, flashlightOn: game.flashlightOn,
         });
       }
     };
@@ -1603,7 +1634,7 @@ export default function Home() {
       game.camera.y += (cameraTargetY - game.camera.y) * .13;
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      const ratio = Math.min(window.matchMedia("(pointer: coarse)").matches ? 1.5 : 2, window.devicePixelRatio || 1);
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = "#060806";
@@ -1793,11 +1824,11 @@ export default function Home() {
     };
   }, [interact, toggleFlashlight, togglePause]);
 
-  const holdKey = (key: string, active: boolean) => {
+  const holdKey = useCallback((key: string, active: boolean) => {
     const game = gameRef.current;
     if (!game) return;
     if (active) game.keys.add(key); else game.keys.delete(key);
-  };
+  }, []);
 
   const updateJoystick = useCallback((clientX: number, clientY: number) => {
     const control = joystickRef.current;
@@ -1813,13 +1844,20 @@ export default function Home() {
     const scale = magnitude > maxTravel ? maxTravel / magnitude : 1;
     const x = rawX * scale;
     const y = rawY * scale;
-    game.joystick = { x: x / maxTravel, y: y / maxTravel };
-    setJoystickVisual({ x, y, active: true });
+    const deadzone = maxTravel * .12;
+    const normalizedMagnitude = magnitude <= deadzone ? 0 : Math.min(1, (magnitude - deadzone) / (maxTravel - deadzone));
+    const response = Math.pow(normalizedMagnitude, .9);
+    const directionX = magnitude > 0 ? rawX / magnitude : 0;
+    const directionY = magnitude > 0 ? rawY / magnitude : 0;
+    game.joystick = { x: directionX * response, y: directionY * response };
+    control.style.setProperty("--stick-x", `${x}px`);
+    control.style.setProperty("--stick-y", `${y}px`);
   }, []);
 
   const startJoystick = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
+    setJoystickActive(true);
     updateJoystick(event.clientX, event.clientY);
   }, [updateJoystick]);
 
@@ -1833,8 +1871,21 @@ export default function Home() {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     const game = gameRef.current;
     if (game) game.joystick = { x: 0, y: 0 };
-    setJoystickVisual({ x: 0, y: 0, active: false });
+    event.currentTarget.style.setProperty("--stick-x", "0px");
+    event.currentTarget.style.setProperty("--stick-y", "0px");
+    setJoystickActive(false);
   }, []);
+
+  const startTouchKey = useCallback((event: ReactPointerEvent<HTMLButtonElement>, key: string) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    holdKey(key, true);
+  }, [holdKey]);
+
+  const releaseTouchKey = useCallback((event: ReactPointerEvent<HTMLButtonElement>, key: string) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    holdKey(key, false);
+  }, [holdKey]);
 
   const statusLabel = hud.monster === "caçando" ? "PERSEGUIÇÃO" : hud.monster === "investigando" ? "ELA OUVIU" : hud.monster === "procurando" ? "PROCURANDO VOCÊ" : "PRESENÇA À ESPREITA";
   const victories = history.filter((entry) => entry.result === "won").length;
@@ -1882,6 +1933,7 @@ export default function Home() {
           <button type="button" onClick={startGame}>ENTRAR NA CASA <span>→</span></button>
           <button className="account-cta" type="button" onClick={openAccount}>{user ? "VER MEU HISTÓRICO" : "ENTRAR PARA SALVAR DESEMPENHO"}</button>
           <div className="keys"><span><kbd>WASD</kbd> MOVER</span><span><kbd>SHIFT</kbd> CORRER (FAZ BARULHO)</span><span><kbd>MOUSE</kbd> MIRAR</span><span><kbd>F</kbd> LUZ</span><span><kbd>E</kbd> ESCONDER</span><span><kbd>ESPAÇO</kbd> FÔLEGO</span><span><kbd>ESC</kbd> PAUSAR</span></div>
+          <div className="mobile-tip">JOYSTICK PARA MOVER · SEGURE CORRER · USE AGIR PERTO DOS ESCONDERIJOS</div>
         </div>}
 
         {mode === "paused" && <div className="pause-overlay">
@@ -1957,14 +2009,15 @@ export default function Home() {
         </div>}
 
         {mode === "running" && <div className="mobile-controls" aria-label="Controles de toque">
-          <div ref={joystickRef} className={`digital-joystick ${joystickVisual.active ? "active" : ""}`} role="group" aria-label="Joystick digital para movimentação" onPointerDown={startJoystick} onPointerMove={moveJoystick} onPointerUp={releaseJoystick} onPointerCancel={releaseJoystick}>
+          <div ref={joystickRef} className={`digital-joystick ${joystickActive ? "active" : ""}`} role="group" aria-label="Joystick digital para movimentação" onPointerDown={startJoystick} onPointerMove={moveJoystick} onPointerUp={releaseJoystick} onPointerCancel={releaseJoystick}>
             <span className="joystick-guide" />
-            <span className="joystick-knob" style={{ transform: `translate(calc(-50% + ${joystickVisual.x}px), calc(-50% + ${joystickVisual.y}px))` }} />
+            <span className="joystick-knob" />
           </div>
-          <div className="action-buttons">
-            <button aria-label="Ligar ou desligar lanterna" onClick={toggleFlashlight}>LUZ</button>
-            {hud.hidden && <button className="breath-button" aria-label="Segurar o fôlego" onPointerDown={() => holdKey("space", true)} onPointerUp={() => holdKey("space", false)} onPointerCancel={() => holdKey("space", false)} onPointerLeave={() => holdKey("space", false)}>FÔLEGO</button>}
-            <button aria-label="Interagir com esconderijo" onClick={interact}>E</button>
+          <div className={`action-buttons ${hud.hidden ? "hidden-actions" : ""}`}>
+            {!hud.hidden && <button className={`light-button ${hud.flashlightOn ? "active" : ""}`} aria-label="Ligar ou desligar lanterna" aria-pressed={hud.flashlightOn} onClick={toggleFlashlight}>LUZ</button>}
+            {!hud.hidden && <button className="sprint-button" aria-label="Segurar para correr" onPointerDown={(event) => startTouchKey(event, "shift")} onPointerUp={(event) => releaseTouchKey(event, "shift")} onPointerCancel={(event) => releaseTouchKey(event, "shift")}>CORRER</button>}
+            {hud.hidden && <button className="breath-button" aria-label="Segurar o fôlego" onPointerDown={(event) => startTouchKey(event, "space")} onPointerUp={(event) => releaseTouchKey(event, "space")} onPointerCancel={(event) => releaseTouchKey(event, "space")}>FÔLEGO</button>}
+            <button className="interact-button" aria-label={hud.hidden ? "Sair do esconderijo" : "Interagir com esconderijo"} onClick={interact}>{hud.hidden ? "SAIR" : "AGIR"}</button>
           </div>
         </div>}
       </section>
