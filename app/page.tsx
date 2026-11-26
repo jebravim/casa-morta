@@ -238,8 +238,8 @@ const WINDOWS: WindowFrame[] = [
 ];
 
 const CHAIRS: Chair[] = [
-  { x: 815, y: 185, w: 36, h: 36, angle: 0 }, { x: 1012, y: 228, w: 36, h: 36, angle: Math.PI / 2 },
-  { x: 200, y: 770, w: 38, h: 38, angle: 0 }, { x: 395, y: 842, w: 38, h: 38, angle: Math.PI / 2 },
+  { x: 760, y: 250, w: 36, h: 36, angle: 0 }, { x: 1120, y: 220, w: 36, h: 36, angle: Math.PI / 2 },
+  { x: 170, y: 930, w: 38, h: 38, angle: 0 }, { x: 330, y: 930, w: 38, h: 38, angle: Math.PI / 2 },
   { x: 1320, y: 700, w: 40, h: 40, angle: -Math.PI / 2 }, { x: 1320, y: 788, w: 40, h: 40, angle: -Math.PI / 2 },
   { x: 1320, y: 876, w: 40, h: 40, angle: -Math.PI / 2 }, { x: 1510, y: 700, w: 40, h: 40, angle: Math.PI / 2 },
   { x: 1510, y: 788, w: 40, h: 40, angle: Math.PI / 2 }, { x: 1510, y: 876, w: 40, h: 40, angle: Math.PI / 2 },
@@ -260,7 +260,9 @@ const HOUSE_LIGHTS: Point[] = [
   { x: 340, y: 1140 }, { x: 890, y: 1140 }, { x: 1480, y: 1140 }, { x: 2070, y: 1140 },
 ];
 
-const SOLIDS: Rect[] = [...WALLS, ...FURNITURE];
+const CHAIR_COLLIDERS: Rect[] = CHAIRS.map(({ x, y, w, h }) => ({ x: x + 8, y: y + 8, w: w - 16, h: h - 16 }));
+const COLLISION_OBSTACLES: Rect[] = [...FURNITURE, ...CHAIR_COLLIDERS];
+const LIGHT_BLOCKERS: Rect[] = [...WALLS, ...FURNITURE, ...CHAIRS];
 
 const BATTERY_POSITIONS: Point[] = [
   { x: 275, y: 275 }, { x: 1015, y: 365 }, { x: 1575, y: 345 }, { x: 2090, y: 420 },
@@ -295,7 +297,7 @@ function insideDoorwayPassage(point: Point, radius: number) {
 function collides(point: Point, radius = PLAYER_RADIUS) {
   if (WALLS.some((rect) => pointIn(point, rect, radius))) return true;
   if (insideDoorwayPassage(point, radius)) return false;
-  return FURNITURE.some((rect) => pointIn(point, rect, radius));
+  return COLLISION_OBSTACLES.some((rect) => pointIn(point, rect, radius));
 }
 
 function safeSpawnPoint(preferred: Point, radius: number) {
@@ -335,7 +337,7 @@ function lineBlocked(a: Point, b: Point) {
   for (let i = 1; i < steps; i++) {
     const t = i / steps;
     const sample = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
-    if (SOLIDS.some((rect) => pointIn(sample, rect, 2))) return true;
+    if (LIGHT_BLOCKERS.some((rect) => pointIn(sample, rect, 2))) return true;
   }
   return false;
 }
@@ -376,7 +378,7 @@ function flashlightBeamPolygon(game: Game) {
     const angle = game.aim - FLASHLIGHT_HALF_ANGLE + index / rayCount * FLASHLIGHT_HALF_ANGLE * 2;
     const direction = { x: Math.cos(angle), y: Math.sin(angle) };
     let rayLength = FLASHLIGHT_RANGE;
-    for (const solid of SOLIDS) {
+    for (const solid of LIGHT_BLOCKERS) {
       const hitDistance = rayRectDistance(game.player, direction, solid);
       if (hitDistance > 6 && hitDistance < rayLength) rayLength = hitDistance;
     }

@@ -76,7 +76,7 @@ test("flashlight beam alerts the monster to the player", async () => {
   assert.match(page, /function flashlightHits\(game: Game, target: Point\)/);
   assert.match(page, /function rayRectDistance\(origin: Point, direction: Point, rect: Rect\)/);
   assert.match(page, /function flashlightBeamPolygon\(game: Game\)/);
-  assert.match(page, /for \(const solid of SOLIDS\)/);
+  assert.match(page, /for \(const solid of LIGHT_BLOCKERS\)/);
   assert.match(page, /const hitDistance = rayRectDistance\(game\.player, direction, solid\)/);
   assert.match(page, /const traceBeamPath = \(target: CanvasRenderingContext2D\)/);
   assert.match(page, /traceBeamPath\(darkness\); darkness\.clip\(\)/);
@@ -159,6 +159,7 @@ test("running creates noise that attracts a nearby monster", async () => {
 
 test("keeps doorways traversable and applies the latest difficulty tuning", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const styles = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(page, /function insideDoorwayPassage/);
   assert.match(page, /if \(insideDoorwayPassage\(point, radius\)\) return false/);
@@ -168,6 +169,12 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
   assert.match(page, /battery: INITIAL_FLASHLIGHT_BATTERY/);
   assert.match(page, /MONSTER_CHASE_SPEED = 180/);
   assert.match(page, /MONSTER_INVESTIGATE_SPEED = 160/);
+  assert.match(page, /const CHAIR_COLLIDERS: Rect\[\] = CHAIRS\.map/);
+  assert.match(page, /const COLLISION_OBSTACLES: Rect\[\] = \[\.\.\.FURNITURE, \.\.\.CHAIR_COLLIDERS\]/);
+  assert.match(page, /return COLLISION_OBSTACLES\.some\(\(rect\) => pointIn\(point, rect, radius\)\)/);
+  assert.match(page, /const LIGHT_BLOCKERS: Rect\[\] = \[\.\.\.WALLS, \.\.\.FURNITURE, \.\.\.CHAIRS\]/);
+  assert.match(styles, /\.charge \{ right: 10px; bottom: 76px; width: 145px; \}/);
+  assert.match(styles, /\.breath-meter \{ bottom: 126px; width: 210px; \}/);
 
   const extractArray = (pattern) => {
     const match = page.match(pattern);
@@ -205,8 +212,10 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
 
   const pointInRect = (point, rect, padding = 0) => point.x > rect.x - padding &&
     point.x < rect.x + rect.w + padding && point.y > rect.y - padding && point.y < rect.y + rect.h + padding;
-  const blocked = (point) => [...walls, ...furniture].some((rect) => pointInRect(point, rect, 18));
-  const blockedForMonster = (point) => [...walls, ...furniture].some((rect) => pointInRect(point, rect, 20));
+  const chairColliders = chairs.map(({ x, y, w, h }) => ({ x: x + 8, y: y + 8, w: w - 16, h: h - 16 }));
+  const collisionMap = [...walls, ...furniture, ...chairColliders];
+  const blocked = (point) => collisionMap.some((rect) => pointInRect(point, rect, 18));
+  const blockedForMonster = (point) => collisionMap.some((rect) => pointInRect(point, rect, 20));
   for (const spot of hidingSpots) {
     assert.equal(blocked(spot.check), false, `Saída do esconderijo ${spot.id} está bloqueada por um móvel ou parede`);
   }
@@ -220,25 +229,34 @@ test("keeps doorways traversable and applies the latest difficulty tuning", asyn
     const cellKeys = new Set(cells.map((cell) => `${cell.x},${cell.y}`));
     const visited = new Set();
     let components = 0;
+    const componentDetails = [];
     for (const cell of cells) {
       const startKey = `${cell.x},${cell.y}`;
       if (visited.has(startKey)) continue;
       components += 1;
       const pending = [cell];
+      let componentSize = 0;
       visited.add(startKey);
       while (pending.length) {
         const current = pending.shift();
-        for (const [dx, dy] of [[40, 0], [-40, 0], [0, 40], [0, -40]]) {
+        componentSize += 1;
+        for (const [dx, dy] of [[40, 0], [-40, 0], [0, 40], [0, -40], [40, 40], [40, -40], [-40, 40], [-40, -40]]) {
           const next = { x: current.x + dx, y: current.y + dy };
           const nextKey = `${next.x},${next.y}`;
+          if (dx !== 0 && dy !== 0) {
+            const sideX = `${current.x + dx},${current.y}`;
+            const sideY = `${current.x},${current.y + dy}`;
+            if (!cellKeys.has(sideX) || !cellKeys.has(sideY)) continue;
+          }
           if (cellKeys.has(nextKey) && !visited.has(nextKey)) {
             visited.add(nextKey);
             pending.push(next);
           }
         }
       }
+      componentDetails.push(`${startKey}:${componentSize}`);
     }
-    assert.equal(components, 1, `${room.name} possui áreas bloqueadas pelos móveis`);
+    assert.equal(components, 1, `${room.name} possui áreas bloqueadas pelos móveis (${componentDetails.join(", ")})`);
   }
 
   assert.match(page, /\{ kind: "table", x: 1360, y: 690, w: 150, h: 225 \}/);
