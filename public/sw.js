@@ -1,7 +1,7 @@
 const CACHE_NAME = "casa-morta-v1";
 const APP_SHELL = [
   "/",
-  "/manifest.webmanifest",
+  "/manifest.json",
   "/pwa-icon-192.png",
   "/pwa-icon-512.png",
   "/apple-touch-icon.png",

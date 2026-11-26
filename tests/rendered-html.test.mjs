@@ -32,7 +32,7 @@ test("ships an installable Casa Morta PWA", async () => {
   const [layout, page, manifestText, serviceWorker, icon192, icon512, appleIcon] = await Promise.all([
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+    readFile(new URL("../public/manifest.json", import.meta.url), "utf8"),
     readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
     stat(new URL("../public/pwa-icon-192.png", import.meta.url)),
     stat(new URL("../public/pwa-icon-512.png", import.meta.url)),
@@ -44,7 +44,7 @@ test("ships an installable Casa Morta PWA", async () => {
   assert.equal(manifest.display, "standalone");
   assert.equal(manifest.start_url, "/?origem=pwa");
   assert.ok(manifest.icons.some((icon) => icon.sizes === "512x512" && icon.purpose === "maskable"));
-  assert.match(layout, /manifest: "\/manifest\.webmanifest"/);
+  assert.match(layout, /manifest: "\/manifest\.json"/);
   assert.match(layout, /appleWebApp:/);
   assert.match(page, /navigator\.serviceWorker\.register\("\/sw\.js"\)/);
   assert.match(page, /beforeinstallprompt/);

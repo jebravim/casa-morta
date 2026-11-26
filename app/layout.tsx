@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
   title: "Casa Morta — Terror e sobrevivência em 2D",
   description: "Sobreviva por 2 minutos e 30 segundos em uma mansão onde a criatura aprende suas rotas e esconderijos.",
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.json",
   applicationName: "Casa Morta",
   appleWebApp: {
     capable: true,
